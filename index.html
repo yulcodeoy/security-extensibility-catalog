@@ -2386,7 +2386,8 @@ header .header-actions {
        <button class="tool mm-depth" data-depth="1" title="Show 1 level">L1</button>
        <button class="tool mm-depth" data-depth="2" title="Show 2 levels">L2</button>
        <button class="tool mm-depth" data-depth="3" title="Show 3 levels">L3</button>
-       <button class="tool mm-depth" data-depth="-1" title="Expand everything">All</button>
+       <button class="tool mm-depth" data-depth="6" title="Show every surface title, with the detail cards collapsed">Surfaces</button>
+       <button class="tool mm-depth" data-depth="-1" title="Expand everything, including the full detail card on every surface">All</button>
        <button class="tool" id="mm-fit" title="Recenter & fit to screen">⌖ Fit</button>
      </span>
      <button class="tool primary pem-only-external" id="pem-wizard-open" title="Help me figure out where to start">🎯 Recommend for me</button>
@@ -5221,7 +5222,15 @@ function patternChip(p) {
 function surfaceLine(id, indent='') {
   const s = S[id];
   if (!s) return `${indent}- **${id}** *(missing)*`;
-  return `${indent}- [**${s.name}**](${s.url}) — ${s.what}${chipsHtml(id)}`;
+  // Same rule as surfaceLineMd: the node is the TITLE ONLY, with the description and
+  // chips as a collapsible child. Keeps the scenario / modality / index mind maps
+  // scannable instead of rendering a full info card per surface.
+  const m = META[id] || {};
+  const dot = m.status === 'GA'         ? ' <span class="chip ga">GA</span>'
+            : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
+            : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
+            : '';
+  return `${indent}- [**${s.name}**](${s.url})${dot}\n${indent}    - ${s.what}${chipsHtml(id)}`;
 }
 
 function buildWorkloadMd() {
@@ -6253,7 +6262,17 @@ function clearMarkmap(viewEl) {
 function surfaceLineMd(id, indent='') {
   const s = S[id]; if (!s) return `${indent}- **${id}** *(missing)*`;
   const c = chipsFor(id);
-  return `${indent}- [**${s.name}**](${s.url}) — ${s.what}${c ? ' ' + c : ''}`;
+  // The surface node is the TITLE ONLY; the description and chip rows hang off it as
+  // a child, so markmap's own collapse toggle keeps them hidden until asked for.
+  // Inlining the full info card made every workload branch a wall of text.
+  const m = META[id] || {};
+  const dot = m.status === 'GA'         ? ' <span class="chip ga">GA</span>'
+            : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
+            : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
+            : '';
+  const head = `${indent}- [**${s.name}**](${s.url})${dot}`;
+  const body = `${indent}    - ${s.what}${c ? ' ' + c : ''}`;
+  return `${head}\n${body}`;
 }
 
 function buildWorkloadMd() {
