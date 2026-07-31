@@ -6294,6 +6294,26 @@ function patchLinks(rootEl) {
     a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer');
   });
 }
+// Minimum zoom at which markmap labels stay readable. mm.fit() scales the whole
+// tree into the viewport, so expanding to 379 surface titles fits at ~5% and the
+// map renders as an illegible hairline. Fit, then clamp back up and let the user pan.
+const MIN_READABLE_SCALE = 0.55;
+function currentMmScale(){
+  const g = _mmViewEl && _mmViewEl.querySelector('#mm > g');
+  const m = g && /scale\(([\d.eE+-]+)/.exec(g.getAttribute('transform') || '');
+  return m ? parseFloat(m[1]) : null;
+}
+async function fitReadable(){
+  if (!mm) return;
+  try { await mm.fit(); } catch (e) { return; }
+  const k = currentMmScale();
+  if (k && k < MIN_READABLE_SCALE) {
+    try { await mm.rescale(MIN_READABLE_SCALE / k); } catch (e) {}
+    if (_mmViewEl) _mmViewEl.classList.add('mm-panned');
+  } else if (_mmViewEl) {
+    _mmViewEl.classList.remove('mm-panned');
+  }
+}
 function renderMarkmapInto(viewEl, md) {
   _mmViewEl = viewEl; _mmMd = md;
   viewEl.innerHTML = '<svg id="mm"></svg>';
@@ -6304,7 +6324,7 @@ function renderMarkmapInto(viewEl, md) {
   const { root } = transformer.transform(md);
   currentRoot = root;
   mm = ml.Markmap.create(svg, buildOptions(), root);
-  setTimeout(() => { mm.fit(); patchLinks(viewEl); }, 80);
+  setTimeout(() => { fitReadable(); patchLinks(viewEl); }, 80);
   // Re-patch on expand
   new MutationObserver(() => patchLinks(viewEl))
     .observe(svg, { childList: true, subtree: true });
@@ -6894,9 +6914,7 @@ const PRODUCT_FLOWS = [
   { from: "purview", to: "defender", verb: "supplies classification to", what: "Purview classification and DLP policy is what Defender for Cloud Apps applies when it governs SaaS and AI app usage. Defender is the enforcement point at the network and app layer; the labels and rules come from Purview.", evidence: ["mda-ai", "dlp-sase-store"] },
   { from: "purview", to: "platform", verb: "extends labelling into", what: "The same Purview label taxonomy is applied to Fabric / Power BI items and Power Platform environments. Partners building analytics or low-code products inherit the tenant taxonomy rather than defining their own.", evidence: ["fabric-labels", "pp-ps", "pp-audit"] },
   { from: "sharepoint", to: "purview", verb: "reports activity back to", what: "The flow is not one-way. SharePoint content and access activity lands back in Purview audit and Data Access Governance, which is what makes oversharing and label-drift visible. Partners reading \"SharePoint activity\" are usually reading a Purview surface.", evidence: ["spo-dag", "audit-graph"] },
-  { from: "entra", to: "agent365", verb: "issues agent identity to", what: "An agent only becomes governable once it has an Entra identity. Entra mints the Agent ID and applies Conditional Access to it; Agent 365 is the layer that consumes that identity.", evidence: ["a365-conditional-access", "ca-workload-id"] },
-  { from: "agent365", to: "entra", verb: "registers agents into", what: "Registering an agent through Agent 365 is what creates the Entra Agent ID in the first place, including for agents built on non-Microsoft identity providers. The registration path runs Agent 365 -> Entra.", evidence: ["a365-register", "agent-blueprint", "a365-3p-idp"] },
-  { from: "agent365", to: "purview", verb: "inherits data policy from", what: "An Agent 365 blueprint makes the tenant's existing Purview policy apply to an agent automatically. This is the single most valuable direction in the map for ISVs: you do not ship a policy engine, you inherit one.", evidence: ["a365-purview-data-governance", "a365-sdk"] },
+  { from: "entra", to: "agent365", verb: "issues agent identity to", what: "An agent only becomes governable once it has an Entra identity. Entra mints the Agent ID and applies Conditional Access to it; Agent 365 is the layer that consumes that identity. Note the registration call runs the other way -- you register through Agent 365 and that is what causes the Entra Agent ID to be created, including for agents built on a non-Microsoft identity provider.", evidence: ["a365-conditional-access", "ca-workload-id", "a365-register", "agent-blueprint", "a365-3p-idp"] },
   { from: "agent365", to: "defender", verb: "exposes agent posture to", what: "Registered agents appear in Defender inventory, and Defender both detects against them and can block unsafe agent actions at runtime. Agent 365 supplies the subject; Defender supplies the detection and enforcement.", evidence: ["a365-defender-inventory", "a365-defender-detection", "a365-defender-realtime-protection"] },
   { from: "intune", to: "entra", verb: "feeds device compliance to", what: "Intune evaluates whether a device is compliant; Entra Conditional Access consumes that verdict as a signal and decides access. Third-party MDM and mobile-threat vendors plug in on the Intune side and their verdict flows into the same CA decision.", evidence: ["intune-compliance-policies", "intune-compliance-partner", "intune-mtd"] },
   { from: "entra", to: "intune", verb: "gates enrolment and access for", what: "Conditional Access governs which identities may enrol and which devices may reach resources -- the policy lives in Entra, the device state lives in Intune.", evidence: ["ca-policy-crud", "intune-graph-core"] },
@@ -6904,11 +6922,10 @@ const PRODUCT_FLOWS = [
   { from: "defender", to: "sentinel", verb: "streams incidents into", what: "Defender XDR is the detection plane; Sentinel is where incidents are correlated, retained and automated against. Most partner \"SIEM integrations\" are really consuming Defender detections through Sentinel.", evidence: ["xdr-stream", "xdr-incidents", "sentinel-graph"] },
   { from: "purview", to: "sentinel", verb: "sends audit and activity to", what: "Purview audit and content-activity records are a primary Sentinel data source, which is how compliance signals end up in SOC detections and hunting.", evidence: ["audit-graph", "graph-activities"] },
   { from: "entra", to: "sentinel", verb: "sends identity risk to", what: "Entra sign-in, audit and identity-protection risk data feeds Sentinel analytics. Identity is the highest-signal source in most SOC content partners ship.", evidence: ["identity-prot", "sentinel-data-connectors-arm"] },
-  { from: "sentinel", to: "seccopilot", verb: "grounds analyst answers in", what: "Security Copilot reasons over Sentinel incidents and data rather than holding its own. Partners surface their product to the analyst by plugging into Copilot, which then pulls the underlying Sentinel context.", evidence: ["seccopilot-embedded-experiences", "seccopilot-plugin-overview"] },
-  { from: "defender", to: "seccopilot", verb: "grounds analyst answers in", what: "Copilot is embedded directly in the Defender experience and reasons over XDR incidents. The analyst never leaves the console; the plugin supplies your product's view of the same incident.", evidence: ["seccopilot-embedded-experiences", "seccopilot-custom-plugins"] },
-  { from: "entra", to: "sharepoint", verb: "authorises access to", what: "Every call into SharePoint and Microsoft Graph is gated by an Entra token and the Conditional Access policy attached to it. Partners hitting throttling or consent problems in SharePoint are usually hitting an Entra decision.", evidence: ["ca-policy-crud", "spo-sam"] },
-  { from: "entra", to: "defender", verb: "authorises and informs", what: "Entra issues the tokens Defender APIs require, and Entra identity-risk is itself a Defender XDR signal -- identity compromise and endpoint compromise are correlated in the same incident.", evidence: ["identity-prot", "ca-cae-sdk"] },
-  { from: "purview", to: "agent365", verb: "governs data handled by", what: "Purview DSPM, DLP and audit extend over what agents read and produce, which is what lets an enterprise deploy a third-party agent without trusting it blindly.", evidence: ["a365-otel", "graph-process"] }
+  { from: "sentinel", to: "seccopilot", verb: "supplies incident context to", what: "Security Copilot reasons over Sentinel incidents and data rather than holding its own. Partners surface their product to the analyst by plugging into Copilot, which then pulls the underlying Sentinel context.", evidence: ["seccopilot-embedded-experiences", "seccopilot-plugin-overview"] },
+  { from: "defender", to: "seccopilot", verb: "supplies incident context to", what: "Copilot is embedded directly in the Defender experience and reasons over XDR incidents. The analyst never leaves the console; the plugin supplies your product's view of the same incident.", evidence: ["seccopilot-embedded-experiences", "seccopilot-custom-plugins"] },
+  { from: "entra", to: "defender", verb: "sends identity risk to", what: "Entra identity-protection risk is a first-class Defender XDR signal: identity compromise and endpoint compromise are correlated into the same incident. (Entra also issues the tokens Defender APIs require, but that is true of every Microsoft API -- see the note below.)", evidence: ["identity-prot", "ca-cae-sdk"] },
+  { from: "purview", to: "agent365", verb: "governs data handled by", what: "An Agent 365 blueprint makes the tenant's existing Purview policy -- DSPM, DLP, audit -- apply to an agent automatically, so an enterprise can deploy a third-party agent without trusting it blindly. For an ISV this means you inherit a policy engine rather than shipping one.", evidence: ["a365-purview-data-governance", "a365-sdk", "graph-process"] }
 ];
 function flowsForPair(a, b) {
   return PRODUCT_FLOWS.filter(f => (f.from === a && f.to === b) || (f.from === b && f.to === a));
@@ -6991,7 +7008,12 @@ function renderConnections() {
     `<strong>Curated, not derived.</strong> The ${PRODUCT_FLOWS.length} arrows show which product <em>issues</em> policy and which one
      <em>enforces</em> it \u2014 for example Purview defines a sensitivity label and SharePoint applies it.
      That relationship is <em>not</em> in the catalog data and cannot be inferred from two products sharing a scenario,
-     so it is hand-authored editorial. Each arrow cites surfaces in this catalog as evidence \u2014 click one to check the claim.` });
+     so it is hand-authored editorial. Each arrow cites surfaces in this catalog as evidence \u2014 click one to check the claim.
+     <br><br><strong>Entra is deliberately not drawn to everything.</strong> Every Microsoft Security API call is gated by an Entra
+     token and the Conditional Access policy attached to it \u2014 including SharePoint, Graph, Defender, Intune and Sentinel.
+     Because that is universally true it says nothing useful as an arrow, so it is stated once here instead. The Entra arrows
+     that <em>are</em> drawn carry a specific claim beyond authentication (identity risk as a signal, device-state gating,
+     agent identity issuance).` });
   dirBar.appendChild(dirBtn);
   v.appendChild(dirBar);
   v.appendChild(dirNote);
@@ -8615,7 +8637,7 @@ function initApp() {
     mmTools.querySelectorAll('.mm-depth').forEach(b => {
       b.onclick = () => applyDepth(b.dataset.depth === 'surfaces' ? 'surfaces' : parseInt(b.dataset.depth, 10));
     });
-    document.getElementById('mm-fit').onclick = () => mm && mm.fit();
+    document.getElementById('mm-fit').onclick = () => mm && fitReadable();
 
     // Skill profile help popover
     const skillHelpBtn = document.getElementById('skill-help-btn');
