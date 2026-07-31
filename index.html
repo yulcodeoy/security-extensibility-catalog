@@ -1,7 +1,6 @@
 <!doctype html>
 <html lang="en" data-build="external">
 <head>
-<meta name="robots" content="noindex, nofollow, noarchive">
 <meta charset="utf-8" />
 <title>Microsoft Security Extensibility Catalog — Mind Map</title>
 <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -2386,7 +2385,7 @@ header .header-actions {
        <button class="tool mm-depth" data-depth="1" title="Show 1 level">L1</button>
        <button class="tool mm-depth" data-depth="2" title="Show 2 levels">L2</button>
        <button class="tool mm-depth" data-depth="3" title="Show 3 levels">L3</button>
-       <button class="tool mm-depth" data-depth="6" title="Show every surface title, with the detail cards collapsed">Surfaces</button>
+       <button class="tool mm-depth" data-depth="surfaces" title="Show every surface title, with the detail collapsed underneath">Surfaces</button>
        <button class="tool mm-depth" data-depth="-1" title="Expand everything, including the full detail card on every surface">All</button>
        <button class="tool" id="mm-fit" title="Recenter & fit to screen">⌖ Fit</button>
      </span>
@@ -5219,18 +5218,78 @@ function patternChip(p) {
   return `<span class="ptype ${p.toLowerCase()}">${p}</span>`;
 }
 
-function surfaceLine(id, indent='') {
-  const s = S[id];
-  if (!s) return `${indent}- **${id}** *(missing)*`;
-  // Same rule as surfaceLineMd: the node is the TITLE ONLY, with the description and
-  // chips as a collapsible child. Keeps the scenario / modality / index mind maps
-  // scannable instead of rendering a full info card per surface.
+// Emit the surface detail as SEPARATE nodes instead of one node holding the whole
+// info card. The hierarchy is deliberate:
+//   surface title  ->  what it does  ->  Status / License / Auth / Reach / Limits
+// so opening a surface gives you the one-line purpose first, and the operational
+// facets only if you drill one more level.
+function surfaceDetailMd(id, indent) {
+  const s = S[id] || {};
   const m = META[id] || {};
+  const out = [];
+  // Facets nest UNDER the description when there is one; if a surface has no
+  // description they'd otherwise be orphaned, so they stay at the top level.
+  const facetIndent = s.what ? indent + '    ' : indent;
+  if (s.what) {
+    // Descriptions run to several hundred characters. At markmap's 320px node width
+    // that is a paragraph-sized block per surface, which is the other half of the
+    // clutter. Clamp it here and keep the full text on hover; the untruncated
+    // description is still shown in the A-Z table and the scenario drawers.
+    const full = String(s.what);
+    const short = full.length > 200 ? full.slice(0, 197).replace(/[\s,;:.]+\S*$/, '') + '\u2026' : full;
+    out.push(full.length > 200
+      ? `${indent}- <span title="${full.replace(/"/g, '&quot;')}">${short}</span>`
+      : `${indent}- ${full}`);
+  }
+  const clampTxt = (t, n) => {
+    const full = String(t);
+    if (full.length <= n) return { txt: full, tip: '' };
+    return { txt: full.slice(0, n - 3).replace(/[\s,;:.]+\S*$/, '') + '\u2026', tip: full };
+  };
+  // Chip VALUES are prose too (some 'gap' and 'scope' notes run 300+ chars), so clamp
+  // them the same way and keep the full text on hover.
+  const chip = (cls, title, prefix, value) => {
+    const { txt, tip } = clampTxt(value, 120);
+    const full = (tip || title);
+    return `<span class="chip ${cls}"${full ? ` title="${String(full).replace(/"/g, '&quot;')}"` : ''}>${prefix}${txt}</span>`;
+  };
+  const status = [];
+  if (m.status === 'GA')              status.push(chip('ga', '', '', 'GA'));
+  else if (m.status === 'Preview')    status.push(chip('preview', '', '', 'Preview'));
+  else if (m.status === 'Deprecated') status.push(chip('dep', '', '', 'Deprecated'));
+  if (m.verified) status.push(chip('verified', 'Last reviewed against Microsoft Learn on this date. This is a review-pass stamp covering a batch of surfaces, not an individual re-check of this one \u2014 reconfirm against the linked page before quoting it.', '\u2713 reviewed ', m.verified));
+  else            status.push(chip('unverified', 'No review stamp \u2014 re-check against Microsoft Learn before quoting', '', '\u26A0 not reviewed'));
+  const license = [];
+  if (m.license) license.push(chip('license', 'Licensing prereq', '\uD83D\uDCB0 ', m.license));
+  const auth = [];
+  if (m.auth_mode) auth.push(chip('authmode', 'Auth mode (delegated/app/both)', '\uD83D\uDC65 ', m.auth_mode));
+  if (m.auth)      auth.push(chip('auth', 'Auth / scope', '\uD83D\uDD11 ', m.auth));
+  const reach = [];
+  if (m.cloud)  reach.push(chip('cloud', 'National cloud availability', '\u2601 ', m.cloud));
+  if (m.region) reach.push(chip('region', 'Regional limit', '\uD83C\uDF10 ', m.region));
+  if (m.scope)  reach.push(chip('scope', 'Coverage scope', '\uD83D\uDCCD ', m.scope));
+  const limits = [];
+  if (m.rate) limits.push(chip('rate', 'Rate limit', '\u23F1 ', m.rate));
+  if (m.gap)  limits.push(chip('gap', 'Known gap / caveat', '\u26A0 ', m.gap));
+  for (const [label, items] of [['Status', status], ['License', license], ['Auth', auth], ['Reach', reach], ['Limits', limits]]) {
+    if (items.length) out.push(`${facetIndent}- **${label}** ${items.join(' ')}`);
+  }
+  return out;
+}
+
+function surfaceTitleMd(id, indent) {
+  const s = S[id], m = META[id] || {};
   const dot = m.status === 'GA'         ? ' <span class="chip ga">GA</span>'
             : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
             : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
             : '';
-  return `${indent}- [**${s.name}**](${s.url})${dot}\n${indent}    - ${s.what}${chipsHtml(id)}`;
+  return `${indent}- [**${s.name}**](${s.url})${dot}`;
+}
+
+function surfaceLine(id, indent='') {
+  const s = S[id];
+  if (!s) return `${indent}- **${id}** *(missing)*`;
+  return [surfaceTitleMd(id, indent), ...surfaceDetailMd(id, indent + '    ')].join('\n');
 }
 
 function buildWorkloadMd() {
@@ -6261,18 +6320,9 @@ function clearMarkmap(viewEl) {
 // ----------------------------------------------------------------------------
 function surfaceLineMd(id, indent='') {
   const s = S[id]; if (!s) return `${indent}- **${id}** *(missing)*`;
-  const c = chipsFor(id);
-  // The surface node is the TITLE ONLY; the description and chip rows hang off it as
-  // a child, so markmap's own collapse toggle keeps them hidden until asked for.
-  // Inlining the full info card made every workload branch a wall of text.
-  const m = META[id] || {};
-  const dot = m.status === 'GA'         ? ' <span class="chip ga">GA</span>'
-            : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
-            : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
-            : '';
-  const head = `${indent}- [**${s.name}**](${s.url})${dot}`;
-  const body = `${indent}    - ${s.what}${c ? ' ' + c : ''}`;
-  return `${head}\n${body}`;
+  // Title-only node; description and each chip group hang off it as separate
+  // collapsible children (see surfaceDetailMd).
+  return [surfaceTitleMd(id, indent), ...surfaceDetailMd(id, indent + '    ')].join('\n');
 }
 
 function buildWorkloadMd() {
@@ -8513,6 +8563,14 @@ function initApp() {
       mmTools.querySelectorAll('.mm-depth').forEach(b =>
         b.classList.toggle('active', String(b.dataset.depth) === String(d)));
     }
+    // Depth at which surface TITLE nodes live, per mind map. Detail always sits two
+    // levels below the title (title -> what it does -> Status/Auth/Reach/Limits).
+    function surfaceTitleDepth() {
+      const r = (location.hash.replace(/^#\//, '').split('/')[0]) || 'scenarios';
+      if (r === 'workload' || r === 'family') return 6;
+      if (r === 'modality' || r === 'index') return 3;
+      return 4; // scenarios / build type
+    }
     function setNodeFold(node, depth, level) {
       // depth: -1 = expand all; otherwise fold at level >= depth
       const shouldFold = depth !== -1 && level >= depth;
@@ -8521,8 +8579,13 @@ function initApp() {
       (node.children || []).forEach(c => setNodeFold(c, depth, level + 1));
     }
     function applyDepth(d) {
+      // 'surfaces' is not a fixed level: surface titles sit at different depths in
+      // different mind maps (6 in workload/product, 3 in modality/A-Z), so resolve
+      // it per route. The intent is "show every surface title, details collapsed".
+      const wasSurfaces = (d === 'surfaces');
+      if (wasSurfaces) d = surfaceTitleDepth();
       currentDepth = d;
-      setActiveDepth(d);
+      setActiveDepth(wasSurfaces ? 'surfaces' : d);
       // Re-render the markmap from source so the new initialExpandLevel takes full effect
       // (mutating payload.fold + setData doesn't reliably re-fold in markmap-view 0.18).
       if (_mmViewEl && _mmMd) {
@@ -8550,7 +8613,7 @@ function initApp() {
       }
     });
     mmTools.querySelectorAll('.mm-depth').forEach(b => {
-      b.onclick = () => applyDepth(parseInt(b.dataset.depth, 10));
+      b.onclick = () => applyDepth(b.dataset.depth === 'surfaces' ? 'surfaces' : parseInt(b.dataset.depth, 10));
     });
     document.getElementById('mm-fit').onclick = () => mm && mm.fit();
 
