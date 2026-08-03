@@ -2340,8 +2340,10 @@ header .header-actions {
      <label for="f-maturity">Maturity</label>
      <select id="f-maturity">
        <option value="">All</option>
-       <option value="GA">GA only</option>
-       <option value="Preview">Preview</option>
+       <option value="ga">GA only</option>
+       <option value="preview">Preview</option>
+       <option value="beta">Beta</option>
+       <option value="deprecated">Deprecated</option>
      </select>
      <label for="f-buildtype">Build type</label>
      <select id="f-buildtype">
@@ -5208,9 +5210,7 @@ function chipsHtml(id) {
   const m = META[id];
   if (!m) return '';
   const out = [];
-  if (m.status === 'GA')        out.push('<span class="chip ga">GA</span>');
-  else if (m.status === 'Preview')    out.push('<span class="chip preview">Preview</span>');
-  else if (m.status === 'Deprecated') out.push('<span class="chip dep">Deprecated</span>');
+  if (m.status) out.push(`<span class="chip ${statusClass(m.status)}" title="${String(m.status).replace(/"/g,'&quot;')}">${statusShortLabel(m.status)}</span>`);
   if (m.license)  out.push(`<span class="chip license" title="Licensing prereq">💰 ${m.license}</span>`);
   if (m.auth_mode)out.push(`<span class="chip authmode" title="Auth mode (delegated/app/both)">👥 ${m.auth_mode}</span>`);
   if (m.cloud)    out.push(`<span class="chip cloud" title="National cloud availability">☁ ${m.cloud}</span>`);
@@ -5232,10 +5232,11 @@ function patternChip(p) {
 
 function surfaceTitleMd(id, indent) {
   const s = S[id], m = META[id] || {};
-  const dot = m.status === 'GA'         ? ' <span class="chip ga">GA</span>'
-            : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
-            : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
-            : '';
+  const raw = m.status || 'GA';
+  const cls = statusClass(raw), lbl = statusShortLabel(raw);
+  // Keep showing GA (it was there before and reads as reassurance), but non-GA
+  // kinds now get their own colour and the full raw status on hover.
+  const dot = ` <span class="chip ${cls}"${cls === 'ga' ? '' : ` title="${String(raw).replace(/"/g,'&quot;')}"`}>${lbl}</span>`;
   // Links to the in-page drawer, NOT straight to Learn. Nesting the description
   // and the Status/Auth/Reach/Limits facets under every surface made the map
   // unbrowsable; the drawer holds all of it (including "Open in docs") and the
@@ -5832,7 +5833,7 @@ function surfaceMatchesFilters(id) {
   const m = META[id] || {};
   const mod = MOD[id] || {};
   if (filters.family && !surfaceInFamily(id, filters.family)) return false;
-  if (filters.maturity && m.status !== filters.maturity) return false;
+  if (filters.maturity && !statusKinds(m.status).includes(filters.maturity)) return false;
   if (filters.effort   && mod.e !== filters.effort) return false;
   if (filters.op       && !opsOf(id).includes(filters.op)) return false;
   if (filters.modality && mod.m !== filters.modality) return false;
@@ -5858,7 +5859,7 @@ function scenarioMatchesFilters(sc) {
   if (filters.effort && !sc.surfaces.some(id => (MOD[id] || {}).e === filters.effort)) return false;
   // If any surface in the scenario passes the maturity filter, the scenario passes
   if (filters.maturity) {
-    const anyMatch = sc.surfaces.some(id => (META[id] || {}).status === filters.maturity);
+    const anyMatch = sc.surfaces.some(id => statusKinds((META[id] || {}).status).includes(filters.maturity));
     if (!anyMatch) return false;
   }
   return true;
@@ -6058,24 +6059,62 @@ function workloadLabelFor(sid, scenarioSurfaces) {
 }
 
 function scenarioMaturitySummary(sids) {
-  let ga = 0, prev = 0, dep = 0;
+  // Counts by normalised kind, not exact string. A hybrid "GA (site) / Preview
+  // (file)" surface counts once under its least-mature kind, so the summary can
+  // never overstate how much of a scenario is GA.
+  let ga = 0, prev = 0, beta = 0, dep = 0;
   for (const sid of sids) {
-    const s = (META[sid] && META[sid].status) || 'GA';
-    if (s === 'Preview') prev++;
-    else if (s === 'Deprecated') dep++;
+    const k = statusKinds((META[sid] && META[sid].status) || 'GA');
+    if (k.includes('deprecated')) dep++;
+    else if (k.includes('preview')) prev++;
+    else if (k.includes('beta')) beta++;
     else ga++;
   }
   const parts = [];
   if (ga) parts.push(`${ga} GA`);
   if (prev) parts.push(`${prev} preview`);
+  if (beta) parts.push(`${beta} beta`);
   if (dep) parts.push(`${dep} deprecated`);
   return parts.join(' · ') || '—';
 }
 
+// A surface's status is mostly 'GA' / 'Preview' / 'Deprecated', but 'Beta' exists
+// and a few entries are free text ("GA (site) / Preview (file)"). Everything that
+// wasn't an exact match used to fall through to GA, which meant a genuinely Preview
+// surface rendered a GREEN GA pill and was unreachable from the maturity filter.
+// Normalise to a SET of kinds so hybrids legitimately match both.
+function statusKinds(status) {
+  const t = String(status == null ? 'GA' : status);
+  const k = [];
+  if (/\bGA\b|generally available/i.test(t))   k.push('ga');
+  if (/\bpreview\b/i.test(t))                  k.push('preview');
+  if (/\bbeta\b/i.test(t))                     k.push('beta');
+  if (/\bdeprecated\b|\bretired\b/i.test(t))   k.push('deprecated');
+  return k.length ? k : ['ga'];
+}
+// Style by the LEAST mature kind present, so "GA (site) / Preview (file)" never
+// reads as plain green GA. Beta shares Preview's amber "pre-GA" colour rather than
+// getting its own class - .chip/.status-pill are themed across six build/theme
+// variants and a new class would have gone unstyled in some of them. The LABEL
+// still says Beta, and the maturity filter still treats beta as distinct.
+function statusClass(status) {
+  const k = statusKinds(status);
+  if (k.includes('deprecated')) return 'dep';
+  if (k.includes('preview') || k.includes('beta')) return 'preview';
+  return 'ga';
+}
+// Compact label for the mind map, where the raw free-text values are far too long.
+function statusShortLabel(status) {
+  const k = statusKinds(status);
+  if (k.includes('deprecated')) return 'Deprecated';
+  if (k.includes('ga') && k.includes('preview')) return 'GA / Preview';
+  if (k.includes('preview')) return 'Preview';
+  if (k.includes('beta'))    return 'Beta';
+  return 'GA';
+}
 function statusPillHtml(status) {
-  const cls = status === 'Preview' ? 'preview' : status === 'Deprecated' ? 'dep' : 'ga';
   const lbl = status || 'GA';
-  return `<span class="status-pill ${cls}">${lbl}</span>`;
+  return `<span class="status-pill ${statusClass(status)}">${lbl}</span>`;
 }
 
 // Quiet API row used inside .api-list on the scenario-detail page.
@@ -6218,9 +6257,7 @@ function el(tag, attrs = {}, ...children) {
 function chipsFor(id) {
   const m = META[id]; if (!m) return '';
   const avail = [], lic = [], auth = [], reach = [], limits = [];
-  if (m.status === 'GA')              avail.push('<span class="chip ga">GA</span>');
-  else if (m.status === 'Preview')    avail.push('<span class="chip preview">Preview</span>');
-  else if (m.status === 'Deprecated') avail.push('<span class="chip dep">Deprecated</span>');
+  if (m.status) avail.push(`<span class="chip ${statusClass(m.status)}" title="${String(m.status).replace(/"/g,'&quot;')}">${statusShortLabel(m.status)}</span>`);
   if (m.verified) avail.push(`<span class="chip verified" title="Last reviewed against Microsoft Learn on this date. This is a review-pass stamp covering a batch of surfaces, not an individual re-check of this one — reconfirm against the linked page before quoting it.">✓ ${m.verified}</span>`);
   else            avail.push(`<span class="chip unverified" title="No review stamp — re-check against Microsoft Learn before quoting">⚠ not reviewed</span>`);
   if (m.license)  lic.push(`<span class="chip license" title="Licensing prereq">💰 ${m.license}</span>`);
@@ -6427,7 +6464,9 @@ function renderFamilies() {
       && sc.surfaces.some(sid => familiesOfSurface(sid).has(f.id)));
     if (!surfIds.size && !scen.length) return null;
 
-    const gaCount = [...surfIds].filter(sid => (META[sid] || {}).status === 'GA').length;
+    // "% GA" must use the normalised kind, otherwise a Beta or hybrid surface is
+    // silently counted as not-GA (or, before statusClass existed, as GA).
+    const gaCount = [...surfIds].filter(sid => statusClass((META[sid] || {}).status) === 'ga').length;
     const pct = surfIds.size ? Math.round((gaCount / surfIds.size) * 100) : 0;
 
     return el('div', { class: 'card family-card', dataset: { famid: f.id },
