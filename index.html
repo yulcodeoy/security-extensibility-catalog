@@ -1369,6 +1369,18 @@ html[data-build="external"] footer {
 .api-spec dd.warn { color: #c4314b; }
 [data-theme="dark"] .api-spec dd.warn { color: #ff788c; }
 
+/* Grouped spec sections (Status / Access / Reach / Limits / Context) so the
+   drawer reads as four answers rather than one flat 15-row list. */
+.api-spec-group { margin: 0 0 6px; }
+.api-spec-group > h4 {
+  margin: 0 0 8px; font-size: 12px; font-weight: 600;
+  text-transform: uppercase; letter-spacing: 0.06em;
+  color: var(--cp-text-soft);
+  border-bottom: 1px solid var(--cp-border); padding-bottom: 5px;
+}
+.api-spec-group .api-spec { margin-bottom: 16px; }
+.mm-surface-link { cursor: pointer; }
+
 .api-drawer-related {
   border-top: 1px solid var(--cp-border); padding-top: 16px;
 }
@@ -2385,8 +2397,7 @@ header .header-actions {
        <button class="tool mm-depth" data-depth="1" title="Show 1 level">L1</button>
        <button class="tool mm-depth" data-depth="2" title="Show 2 levels">L2</button>
        <button class="tool mm-depth" data-depth="3" title="Show 3 levels">L3</button>
-       <button class="tool mm-depth" data-depth="surfaces" title="Show every surface title, with the detail collapsed underneath">Surfaces</button>
-       <button class="tool mm-depth" data-depth="-1" title="Expand everything, including the full detail card on every surface">All</button>
+       <button class="tool mm-depth" data-depth="-1" title="Expand every branch down to the API surfaces. Click a surface to open its full spec.">All</button>
        <button class="tool" id="mm-fit" title="Recenter & fit to screen">⌖ Fit</button>
      </span>
      <button class="tool primary pem-only-external" id="pem-wizard-open" title="Help me figure out where to start">🎯 Recommend for me</button>
@@ -2414,7 +2425,7 @@ header .header-actions {
 <main id="view"></main>
 
 <footer>
-  Last updated 2026-07-30 · Click anything to drill in · API names link to Microsoft Learn · partner attribution is illustrative — verify each surface against the linked Microsoft Learn page before external citation
+  Last updated 2026-07-30 · Click anything to drill in · click an API name to open its full spec (status, access, reach, limits) · partner attribution is illustrative — verify each surface against the linked Microsoft Learn page before external citation
 </footer>
 
 <details id="not-extensible-panel" style="margin: 0 16px 24px; padding: 12px 16px; border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface-soft); font-size: 13px; color: var(--cp-text-soft);">
@@ -5218,64 +5229,6 @@ function patternChip(p) {
   return `<span class="ptype ${p.toLowerCase()}">${p}</span>`;
 }
 
-// Emit the surface detail as SEPARATE nodes instead of one node holding the whole
-// info card. The hierarchy is deliberate:
-//   surface title  ->  what it does  ->  Status / License / Auth / Reach / Limits
-// so opening a surface gives you the one-line purpose first, and the operational
-// facets only if you drill one more level.
-function surfaceDetailMd(id, indent) {
-  const s = S[id] || {};
-  const m = META[id] || {};
-  const out = [];
-  // Facets nest UNDER the description when there is one; if a surface has no
-  // description they'd otherwise be orphaned, so they stay at the top level.
-  const facetIndent = s.what ? indent + '    ' : indent;
-  if (s.what) {
-    // Descriptions run to several hundred characters. At markmap's 320px node width
-    // that is a paragraph-sized block per surface, which is the other half of the
-    // clutter. Clamp it here and keep the full text on hover; the untruncated
-    // description is still shown in the A-Z table and the scenario drawers.
-    const full = String(s.what);
-    const short = full.length > 200 ? full.slice(0, 197).replace(/[\s,;:.]+\S*$/, '') + '\u2026' : full;
-    out.push(full.length > 200
-      ? `${indent}- <span title="${full.replace(/"/g, '&quot;')}">${short}</span>`
-      : `${indent}- ${full}`);
-  }
-  const clampTxt = (t, n) => {
-    const full = String(t);
-    if (full.length <= n) return { txt: full, tip: '' };
-    return { txt: full.slice(0, n - 3).replace(/[\s,;:.]+\S*$/, '') + '\u2026', tip: full };
-  };
-  // Chip VALUES are prose too (some 'gap' and 'scope' notes run 300+ chars), so clamp
-  // them the same way and keep the full text on hover.
-  const chip = (cls, title, prefix, value) => {
-    const { txt, tip } = clampTxt(value, 120);
-    const full = (tip || title);
-    return `<span class="chip ${cls}"${full ? ` title="${String(full).replace(/"/g, '&quot;')}"` : ''}>${prefix}${txt}</span>`;
-  };
-  const status = [];
-  if (m.status === 'GA')              status.push(chip('ga', '', '', 'GA'));
-  else if (m.status === 'Preview')    status.push(chip('preview', '', '', 'Preview'));
-  else if (m.status === 'Deprecated') status.push(chip('dep', '', '', 'Deprecated'));
-  if (m.verified) status.push(chip('verified', 'Last reviewed against Microsoft Learn on this date. This is a review-pass stamp covering a batch of surfaces, not an individual re-check of this one \u2014 reconfirm against the linked page before quoting it.', '\u2713 reviewed ', m.verified));
-  else            status.push(chip('unverified', 'No review stamp \u2014 re-check against Microsoft Learn before quoting', '', '\u26A0 not reviewed'));
-  const license = [];
-  if (m.license) license.push(chip('license', 'Licensing prereq', '\uD83D\uDCB0 ', m.license));
-  const auth = [];
-  if (m.auth_mode) auth.push(chip('authmode', 'Auth mode (delegated/app/both)', '\uD83D\uDC65 ', m.auth_mode));
-  if (m.auth)      auth.push(chip('auth', 'Auth / scope', '\uD83D\uDD11 ', m.auth));
-  const reach = [];
-  if (m.cloud)  reach.push(chip('cloud', 'National cloud availability', '\u2601 ', m.cloud));
-  if (m.region) reach.push(chip('region', 'Regional limit', '\uD83C\uDF10 ', m.region));
-  if (m.scope)  reach.push(chip('scope', 'Coverage scope', '\uD83D\uDCCD ', m.scope));
-  const limits = [];
-  if (m.rate) limits.push(chip('rate', 'Rate limit', '\u23F1 ', m.rate));
-  if (m.gap)  limits.push(chip('gap', 'Known gap / caveat', '\u26A0 ', m.gap));
-  for (const [label, items] of [['Status', status], ['License', license], ['Auth', auth], ['Reach', reach], ['Limits', limits]]) {
-    if (items.length) out.push(`${facetIndent}- **${label}** ${items.join(' ')}`);
-  }
-  return out;
-}
 
 function surfaceTitleMd(id, indent) {
   const s = S[id], m = META[id] || {};
@@ -5283,13 +5236,17 @@ function surfaceTitleMd(id, indent) {
             : m.status === 'Preview'    ? ' <span class="chip preview">Preview</span>'
             : m.status === 'Deprecated' ? ' <span class="chip dep">Deprecated</span>'
             : '';
-  return `${indent}- [**${s.name}**](${s.url})${dot}`;
+  // Links to the in-page drawer, NOT straight to Learn. Nesting the description
+  // and the Status/Auth/Reach/Limits facets under every surface made the map
+  // unbrowsable; the drawer holds all of it (including "Open in docs") and the
+  // map stays a map. patchLinks() intercepts the #surface/ scheme.
+  return `${indent}- [**${s.name}**](#surface/${encodeURIComponent(id)})${dot}`;
 }
 
 function surfaceLine(id, indent='') {
   const s = S[id];
   if (!s) return `${indent}- **${id}** *(missing)*`;
-  return [surfaceTitleMd(id, indent), ...surfaceDetailMd(id, indent + '    ')].join('\n');
+  return surfaceTitleMd(id, indent);
 }
 
 function buildWorkloadMd() {
@@ -6176,23 +6133,40 @@ function openApiDrawer(sid) {
     .map(sc => `<li><a onclick="location.hash='#/scenario/${sc.id}';closeApiDrawer()">${sc.label}</a></li>`)
     .join('');
 
-  const specRows = [
-    ['Role',     roleLabel ? `<span>${roleLabel}</span>` : null],
-    ['Workload', wl || null],
-    ['Status',   statusPillHtml(m.status || 'GA')],
-    ['Operation', opsOf(sid).length ? opsOf(sid).map(x => OP_LABELS[x]).join('<br>') : null],
-    ['Modality', modality || null],
-    ['Cloud',    m.cloud || null],
-    ['License',  m.license || null],
-    ['Auth',     m.auth || null],
-    ['Auth mode',m.auth_mode || null],
-    ['Scope',    m.scope || null],
-    ['Rate',     m.rate || null],
-    ['Region',   m.region || null],
-    ['Effort',   effort || null],
-    ['Reviewed', m.verified ? `✓ ${m.verified} <span class="rev-note">(review-pass stamp, not an individual re-check)</span>` : `<span class="warn">⚠ not reviewed</span>`],
-    ['Caveat',   m.gap ? `<span class="warn">⚠ ${m.gap}</span>` : null],
-  ].filter(([,v]) => v).map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  // Grouped so the drawer answers the four questions partners actually ask,
+  // in the same vocabulary the mind map used to nest: Status / Access / Reach /
+  // Limits, with the classification context last.
+  const groups = [
+    ['Status', [
+      ['Status',   statusPillHtml(m.status || 'GA')],
+      ['Reviewed', m.verified ? `✓ ${m.verified} <span class="rev-note">(review-pass stamp, not an individual re-check)</span>` : `<span class="warn">⚠ not reviewed</span>`],
+    ]],
+    ['Access', [
+      ['License',   m.license || null],
+      ['Auth',      m.auth || null],
+      ['Auth mode', m.auth_mode || null],
+      ['Operation', opsOf(sid).length ? opsOf(sid).map(x => OP_LABELS[x]).join('<br>') : null],
+    ]],
+    ['Reach', [
+      ['Cloud',  m.cloud || null],
+      ['Region', m.region || null],
+      ['Scope',  m.scope || null],
+    ]],
+    ['Limits', [
+      ['Rate',   m.rate || null],
+      ['Caveat', m.gap ? `<span class="warn">⚠ ${m.gap}</span>` : null],
+    ]],
+    ['Context', [
+      ['Role',     roleLabel ? `<span>${roleLabel}</span>` : null],
+      ['Workload', wl || null],
+      ['Modality', modality || null],
+      ['Effort',   effort || null],
+    ]],
+  ];
+  const specHtml = groups.map(([label, rows]) => {
+    const body = rows.filter(([,v]) => v).map(([k,v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+    return body ? `<div class="api-spec-group"><h4>${label}</h4><dl class="api-spec">${body}</dl></div>` : '';
+  }).join('');
 
   _apiDrawerEl.innerHTML = `
     <div class="api-drawer-header">
@@ -6206,7 +6180,7 @@ function openApiDrawer(sid) {
       <p class="api-drawer-what">${s.what}</p>
       <a class="api-drawer-action" href="${s.url}" target="_blank" rel="noopener noreferrer">Open in docs ↗</a>
       ${(SAMPLES[sid] && SAMPLES[sid].length) ? `<div class="api-drawer-samples"><h4>📦 Samples</h4><ul>${SAMPLES[sid].map(sm => `<li><a href="${sm.url}" target="_blank" rel="noopener noreferrer">${sm.label} ↗</a></li>`).join('')}</ul></div>` : ''}
-      <dl class="api-spec">${specRows}</dl>
+      ${specHtml}
       ${others ? `<div class="api-drawer-related"><h4>Also used in</h4><ul>${others}</ul></div>` : ''}
     </div>`;
   _apiDrawerLastFocus = document.activeElement;
@@ -6291,6 +6265,20 @@ function buildOptions() {
 }
 function patchLinks(rootEl) {
   (rootEl || document).querySelectorAll('svg a').forEach(a => {
+    const href = a.getAttribute('href') || a.getAttribute('xlink:href') || '';
+    if (href.startsWith('#surface/')) {
+      // Surface titles open the in-page drawer. Must NOT get target=_blank, and
+      // must not be allowed to change location.hash (that would hit the router).
+      if (a.dataset.surfaceBound) return;
+      a.dataset.surfaceBound = '1';
+      a.removeAttribute('target');
+      a.classList.add('mm-surface-link');
+      a.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        openApiDrawer(decodeURIComponent(href.slice('#surface/'.length)));
+      });
+      return;
+    }
     a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener noreferrer');
   });
 }
@@ -6340,9 +6328,8 @@ function clearMarkmap(viewEl) {
 // ----------------------------------------------------------------------------
 function surfaceLineMd(id, indent='') {
   const s = S[id]; if (!s) return `${indent}- **${id}** *(missing)*`;
-  // Title-only node; description and each chip group hang off it as separate
-  // collapsible children (see surfaceDetailMd).
-  return [surfaceTitleMd(id, indent), ...surfaceDetailMd(id, indent + '    ')].join('\n');
+  // Leaf node. All detail lives in the drawer - see surfaceTitleMd.
+  return surfaceTitleMd(id, indent);
 }
 
 function buildWorkloadMd() {
@@ -8585,8 +8572,8 @@ function initApp() {
       mmTools.querySelectorAll('.mm-depth').forEach(b =>
         b.classList.toggle('active', String(b.dataset.depth) === String(d)));
     }
-    // Depth at which surface TITLE nodes live, per mind map. Detail always sits two
-    // levels below the title (title -> what it does -> Status/Auth/Reach/Limits).
+    // Depth at which surface TITLE nodes live, per mind map. Surfaces are leaves
+    // now (their spec opens in the drawer), so this is the deepest useful level.
     function surfaceTitleDepth() {
       const r = (location.hash.replace(/^#\//, '').split('/')[0]) || 'scenarios';
       if (r === 'workload' || r === 'family') return 6;
@@ -8601,9 +8588,9 @@ function initApp() {
       (node.children || []).forEach(c => setNodeFold(c, depth, level + 1));
     }
     function applyDepth(d) {
-      // 'surfaces' is not a fixed level: surface titles sit at different depths in
-      // different mind maps (6 in workload/product, 3 in modality/A-Z), so resolve
-      // it per route. The intent is "show every surface title, details collapsed".
+      // 'surfaces' is kept as an alias (window.__applyDepth('surfaces') and any
+      // saved state) even though the button is gone: surfaces are leaves now, so
+      // it resolves to the same tree as 'All'.
       const wasSurfaces = (d === 'surfaces');
       if (wasSurfaces) d = surfaceTitleDepth();
       currentDepth = d;
