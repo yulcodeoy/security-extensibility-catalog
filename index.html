@@ -4841,6 +4841,9 @@ const FAMILIES = [
   { id: 'sharepoint', kind: 'product', emoji: '📁', label: 'SharePoint & Microsoft 365',
     tagline: 'Where the content actually lives — and where oversharing is enforced',
     blurb: 'Partners kept telling us the same thing: a lot of the enforcement customers ask for is not in a security console at all, it is in SharePoint. This family covers the SharePoint-native controls — Restricted Content Discovery, Restricted Access Control, Data Access Governance reports, container labels and site lifecycle policies — plus the planes you actually automate them with: the SPO Management Shell, PnP PowerShell, Graph sites/drives, the legacy _api/ REST and CSOM surface, and list webhooks.' },
+  { id: 'm365copilot', kind: 'product', emoji: '✨', label: 'Microsoft 365 Copilot & AI apps',
+    tagline: 'Where governed AI activity is produced',
+    blurb: 'The AI layer that grounds on tenant content — Microsoft 365 Copilot and the third-party AI apps that sit alongside it. It is on this map because it is a producer of governed activity, not a control plane: every prompt and response is an auditable event that lands in Purview, is constrained by sensitivity labels and DLP for Copilot policy, and is limited at source by what SharePoint will let Copilot discover. Distinct from Security Copilot, which is the analyst-facing SOC assistant, and from Agent 365, which is the control plane for autonomous agents. Partners building an AI app inherit this governance by calling processContent and protectionScopes rather than shipping a policy engine.' },
   { id: 'platform', kind: 'crosscutting',   emoji: '🧩', label: 'Platform & go-to-market',
     tagline: 'Shared plumbing, marketplace & partner programs',
     blurb: 'Graph plumbing, auth, connectors, and the routes to market — MISA, Microsoft Security Store, Azure Marketplace, AppSource and co-sell — that turn a working integration into an offer customers can find and buy.' },
@@ -4861,6 +4864,18 @@ const WORKLOADS = [
   { id: 'spo-dev-apis', label: 'SharePoint developer APIs', pillar: 'sharepoint', family: 'sharepoint',
     narrative: 'The programmatic planes for SharePoint content. Graph sites/drives/lists is the recommended surface for new work; _api/ REST and CSOM remain supported but legacy; webhooks give you change signals without polling. Item-level label assign/extract is cross-listed here from Purview.',
     surfaces: ['spo-graph-sites','spo-rest-csom','spo-webhooks','graph-content-label'] },
+  // Microsoft 365 Copilot cross-lists surfaces that are authored in Purview,
+  // SharePoint and Defender rather than owning its own. That is deliberate and
+  // matches how the estate really works: Copilot has no governance API of its
+  // own, so a partner asking "how do I govern Copilot" is always sent to
+  // another product's surface. Nothing is moved -- these appear in both
+  // families, exactly like the existing MIP and Agent 365 cross-listings.
+  { id: 'm365cop-protect', label: 'Copilot oversharing & DLP controls', pillar: 'purview', family: 'm365copilot',
+    narrative: 'What actually constrains Copilot. Restricted Content Discovery removes a site from Copilot\'s reach entirely and is the single most effective oversharing control; DLP for Copilot policies constrain what may be processed; the browser extensions extend prompt-level data security to AI apps running outside Microsoft 365. Note that none of these are Copilot APIs -- they are SharePoint and Purview surfaces.',
+    surfaces: ['spo-rcd','dlp-copilot','browser-dlp','browser-ext'] },
+  { id: 'm365cop-activity', label: 'Copilot & AI interaction audit', pillar: 'purview', family: 'm365copilot',
+    narrative: 'The activity Copilot produces and where it lands. AI interaction records are read through Graph auditLogQuery and contentActivities; processContent and protectionScopes are how a third-party AI app gets the same inline DLP treatment Copilot gets natively; the Defender for Cloud Apps AI catalog is how shadow AI shows up in DSPM for AI.',
+    surfaces: ['audit-copilot','graph-activities','graph-process','graph-scopes','purview-sdk-ai','mda-ai'] },
   { id: 'data-map', label: 'Data Map & Catalog', pillar: 'purview', family: 'purview',
     narrative: 'Catalog your assets, push lineage, and surface searchable metadata. Built on Apache Atlas — partners get REST + Kafka + SDKs to make any data source first-class in Purview. ARM API provisions the governance accounts.',
     surfaces: ['atlas-rest','atlas-kafka','scanning-rest','catalog-rest','account-rest','purview-sdks','openlineage','data-quality','shir','arm-purview'] },
@@ -7339,7 +7354,20 @@ const PRODUCT_FLOWS = [
   { from: "sentinel", to: "seccopilot", verb: "supplies incident context to", what: "Security Copilot reasons over Sentinel incidents and data rather than holding its own. Partners surface their product to the analyst by plugging into Copilot, which then pulls the underlying Sentinel context.", evidence: ["seccopilot-embedded-experiences", "seccopilot-plugin-overview"] },
   { from: "defender", to: "seccopilot", verb: "supplies incident context to", what: "Copilot is embedded directly in the Defender experience and reasons over XDR incidents. The analyst never leaves the console; the plugin supplies your product's view of the same incident.", evidence: ["seccopilot-embedded-experiences", "seccopilot-custom-plugins"] },
   { from: "entra", to: "defender", verb: "sends identity risk to", what: "Entra identity-protection risk is a first-class Defender XDR signal: identity compromise and endpoint compromise are correlated into the same incident. (Entra also issues the tokens Defender APIs require, but that is true of every Microsoft API -- see the note below.)", evidence: ["identity-prot", "ca-cae-sdk"] },
-  { from: "purview", to: "agent365", verb: "governs data handled by", what: "An Agent 365 blueprint makes the tenant's existing Purview policy -- DSPM, DLP, audit -- apply to an agent automatically, so an enterprise can deploy a third-party agent without trusting it blindly. For an ISV this means you inherit a policy engine rather than shipping one.", evidence: ["a365-purview-data-governance", "a365-sdk", "graph-process"] }
+  { from: "purview", to: "agent365", verb: "governs data handled by", what: "An Agent 365 blueprint makes the tenant's existing Purview policy -- DSPM, DLP, audit -- apply to an agent automatically, so an enterprise can deploy a third-party agent without trusting it blindly. For an ISV this means you inherit a policy engine rather than shipping one.", evidence: ["a365-purview-data-governance", "a365-sdk", "graph-process"] },
+
+  // --- Return paths -------------------------------------------------------
+  // The set above models who ISSUES policy. Read on its own it makes Purview
+  // look like a pure source -- six flows out, one in -- which is the opposite
+  // of what Purview is. Purview is the audit and governance sink for the
+  // estate. The flows below are the activity coming back, and every one of
+  // them is evidenced by ingestion surfaces already in this catalog.
+  { from: "m365copilot", to: "purview", verb: "sends AI interaction audit to", what: "Every Microsoft 365 Copilot prompt and response is an auditable event. The interaction records land in Purview, which is what makes Copilot usage reviewable in Audit, discoverable in eDiscovery, and scoreable in DSPM for AI. A partner asking \"how do I see what Copilot did\" is asking for a Purview surface, not a Copilot one.", evidence: ["audit-copilot", "graph-activities"] },
+  { from: "purview", to: "m365copilot", verb: "applies DLP and labels to", what: "Copilot honours the tenant's existing sensitivity labels and DLP policy: labelled content is excluded from grounding or its label is inherited by the response, and DLP for Copilot policies constrain what may be processed. Third-party AI apps get the same treatment by calling processContent and protectionScopes rather than shipping their own policy engine.", evidence: ["dlp-copilot", "graph-process", "graph-scopes"] },
+  { from: "sharepoint", to: "m365copilot", verb: "restricts what can be surfaced by", what: "This is the control partners keep rediscovering: the most effective limit on what Copilot can surface is not an AI setting, it is SharePoint. Restricted Content Discovery takes a site out of Copilot's reach entirely, and Data Access Governance reports are how you find the oversharing to begin with.", evidence: ["spo-rcd", "spo-dag"] },
+  { from: "platform", to: "purview", verb: "ingests third-party activity into", what: "Purview does not only govern Microsoft data. HR records, healthcare and generic third-party feeds, third-party communications content, and external SIEM indicators are all pushed into Purview through connectors -- and that ingestion path is one of the most direct partner motions in the whole catalog.", evidence: ["hr-connector", "healthcare-conn", "cc-connectors", "irm-byod-conn"] },
+  { from: "defender", to: "purview", verb: "supplies endpoint and shadow-AI signals to", what: "The return leg of the Purview/Defender relationship. Endpoint DLP is authored in Purview but enforced by the Defender endpoint agent, and its events are read through Defender advanced hunting; Defender for Cloud Apps supplies the AI app catalog that Purview DSPM for AI uses to surface shadow AI.", evidence: ["endpoint-dlp-hunt", "mda-ai"] },
+  { from: "agent365", to: "purview", verb: "reports agent interactions to", what: "Governance of an agent is not only policy pushed onto it -- the agent reports back. Agent 365 emits OpenTelemetry and content-activity records into Purview so a customer can audit what an agent actually did with their data, which is the evidence an enterprise needs before deploying a third-party agent.", evidence: ["a365-otel", "graph-activities"] }
 ];
 function flowsForPair(a, b) {
   return PRODUCT_FLOWS.filter(f => (f.from === a && f.to === b) || (f.from === b && f.to === a));
@@ -7364,7 +7392,13 @@ const VERB_KIND = {
   'streams incidents into': 'telemetry',
   'sends audit and activity to': 'telemetry',
   'sends identity risk to': 'telemetry',
-  'supplies incident context to': 'reasoning'
+  'supplies incident context to': 'reasoning',
+  'applies DLP and labels to': 'control',
+  'restricts what can be surfaced by': 'control',
+  'sends AI interaction audit to': 'telemetry',
+  'ingests third-party activity into': 'telemetry',
+  'supplies endpoint and shadow-AI signals to': 'telemetry',
+  'reports agent interactions to': 'telemetry'
 };
 const PLANES = [
   { id: 'control', label: 'Control', emoji: '\u{1F3AF}',
@@ -7393,22 +7427,26 @@ function connEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', 
 // Presentation only. Regions read left -> right: the estate that is protected,
 // the core that detects and classifies, the operations layer that acts.
 const ATLAS_REGIONS = [
-  { id: 'estate',    label: 'Protected estate \u00b7 identity \u00b7 devices \u00b7 content', x: 40,  y: 108, w: 300, h: 620 },
+  { id: 'estate',    label: 'Protected estate \u00b7 identity \u00b7 devices \u00b7 content', x: 40,  y: 108, w: 300, h: 690 },
   { id: 'core',      label: 'Detection & data-security core',                              x: 396, y: 150, w: 320, h: 470 },
   { id: 'ops',       label: 'Security operations',                                         x: 780, y: 150, w: 300, h: 470 },
   { id: 'agent',     label: 'Agent control plane',                                         x: 396, y: 668, w: 320, h: 130 },
   { id: 'substrate', label: 'Platform substrate \u00b7 go-to-market',                       x: 780, y: 668, w: 300, h: 130 }
 ];
+// Four nodes now share the estate column, so the spacing tightens from 180 to
+// 160 and the region grows to the same bottom edge (798) as the agent and
+// substrate regions rather than stopping short at 728.
 const ATLAS_LAYOUT = {
-  sharepoint: { x: 74,  y: 168, w: 232, h: 82, region: 'estate' },
-  intune:     { x: 74,  y: 348, w: 232, h: 82, region: 'estate' },
-  entra:      { x: 74,  y: 528, w: 232, h: 82, region: 'estate' },
-  defender:   { x: 428, y: 208, w: 256, h: 88, region: 'core' },
-  purview:    { x: 428, y: 452, w: 256, h: 88, region: 'core' },
-  sentinel:   { x: 812, y: 208, w: 236, h: 88, region: 'ops' },
-  seccopilot: { x: 812, y: 452, w: 236, h: 88, region: 'ops' },
-  agent365:   { x: 428, y: 700, w: 256, h: 80, region: 'agent' },
-  platform:   { x: 812, y: 700, w: 236, h: 80, region: 'substrate' }
+  sharepoint:  { x: 74,  y: 160, w: 232, h: 82, region: 'estate' },
+  m365copilot: { x: 74,  y: 320, w: 232, h: 82, region: 'estate' },
+  intune:      { x: 74,  y: 480, w: 232, h: 82, region: 'estate' },
+  entra:       { x: 74,  y: 640, w: 232, h: 82, region: 'estate' },
+  defender:    { x: 428, y: 208, w: 256, h: 88, region: 'core' },
+  purview:     { x: 428, y: 452, w: 256, h: 88, region: 'core' },
+  sentinel:    { x: 812, y: 208, w: 236, h: 88, region: 'ops' },
+  seccopilot:  { x: 812, y: 452, w: 236, h: 88, region: 'ops' },
+  agent365:    { x: 428, y: 700, w: 256, h: 80, region: 'agent' },
+  platform:    { x: 812, y: 700, w: 236, h: 80, region: 'substrate' }
 };
 const ATLAS_W = 1120, ATLAS_H = 820;
 // Content occupies x 40..1080, y 108..798. Cropping the unused margin lets the
@@ -7445,7 +7483,13 @@ const FLOW_META = {
   'sentinel>seccopilot>supplies incident context to': { type: 'identity', moves: 'Incident + entity context',              mech: 'Copilot reasons over Sentinel incidents and data',                  cadence: 'On analyst prompt / agent run',      native: 'Native' },
   'defender>seccopilot>supplies incident context to': { type: 'identity', moves: 'XDR incident + evidence context',        mech: 'Copilot embedded in the Defender experience',                       cadence: 'On analyst prompt',                  native: 'Native' },
   'entra>defender>sends identity risk to':         { type: 'signal',   moves: 'Identity-protection risk events',           mech: 'Risk correlated as a first-class XDR signal',                       cadence: 'Continuous',                         native: 'Native' },
-  'purview>agent365>governs data handled by':      { type: 'policy',   moves: 'DSPM, DLP, audit policy inherited by agents', mech: 'Agent 365 blueprint auto-applies existing tenant Purview policy', cadence: 'Automatic on blueprint adoption',    native: 'Native (Preview)' }
+  'purview>agent365>governs data handled by':      { type: 'policy',   moves: 'DSPM, DLP, audit policy inherited by agents', mech: 'Agent 365 blueprint auto-applies existing tenant Purview policy', cadence: 'Automatic on blueprint adoption',    native: 'Native (Preview)' },
+  'm365copilot>purview>sends AI interaction audit to': { type: 'signal', moves: 'Copilot prompt/response interaction records', mech: 'AI interaction audit via Graph auditLogQuery + contentActivities', cadence: 'Continuous',                    native: 'Native' },
+  'purview>m365copilot>applies DLP and labels to': { type: 'policy',   moves: 'Sensitivity labels + DLP for Copilot policy',  mech: 'Label-aware grounding; processContent / protectionScopes for 3P AI apps', cadence: 'Per prompt / on policy change', native: 'Native' },
+  'sharepoint>m365copilot>restricts what can be surfaced by': { type: 'policy', moves: 'Content reachability for Copilot',    mech: 'Restricted Content Discovery + Data Access Governance findings',    cadence: 'On site policy change',              native: 'Native (SharePoint Advanced Management)' },
+  'platform>purview>ingests third-party activity into': { type: 'signal', moves: 'HR records, 3P comms content, external indicators', mech: 'Purview data connectors + CSV/indicator import APIs',       cadence: 'Scheduled / on push',                native: 'Customer-configured connector' },
+  'defender>purview>supplies endpoint and shadow-AI signals to': { type: 'signal', moves: 'Endpoint DLP events, discovered AI apps', mech: 'MDE agent enforcement read via advanced hunting; MDA AI app catalog', cadence: 'Continuous',                 native: 'Native' },
+  'agent365>purview>reports agent interactions to': { type: 'signal', moves: 'Agent telemetry + content-activity records',   mech: 'OpenTelemetry (OTLP) ingestion + contentActivities',                cadence: 'Continuous (Preview)',               native: 'Native (Preview)' }
 };
 
 // The curated table models who issues policy, but never who acts back on whom.
@@ -7606,22 +7650,54 @@ const BOX_W = 158, BOX_H = 52;
 function edgePath(sx, sy, ex, ey, back, off) {
   off = off || 0;
   if (!back) {
+    const [px, py] = edgeNormal(sx, sy, ex, ey, off);
     const mx = (sx + ex) / 2;
-    return `M ${sx} ${sy} C ${mx} ${sy + off} ${mx} ${ey + off} ${ex} ${ey}`;
+    return `M ${sx} ${sy} C ${mx + px} ${sy + py} ${mx + px} ${ey + py} ${ex} ${ey}`;
   }
   const dip = 46 + Math.abs(sy - ey) * 0.2 + Math.abs(off);
   const my = Math.max(sy, ey) + dip;
   return `M ${sx} ${sy} C ${sx + 40} ${my} ${ex - 40} ${my} ${ex} ${ey}`;
 }
-// Midpoint of the cubic used by edgePath, so a flow label can sit on its own
-// curve rather than being guessed at. Solved at t=0.5 rather than measured with
-// getPointAtLength, because the path is labelled before it is in the document.
-function edgeMid(sx, sy, ex, ey, back, off) {
+// Separation for parallel flows has to run perpendicular to the line, not
+// always down the y axis. Purview sits directly below Defender and directly
+// above Agent 365, so a y-only offset left both directions of those pairs
+// drawn on identical coordinates -- two claims rendering as one line.
+function edgeNormal(sx, sy, ex, ey, off) {
+  let dx = ex - sx, dy = ey - sy;
+  // Canonicalise the direction first. A bidirectional pair runs both ways, so
+  // an un-canonicalised normal flips with the flow and cancels out the +/-
+  // offset, putting both directions back on the same coordinates.
+  if (dx < 0 || (dx === 0 && dy < 0)) { dx = -dx; dy = -dy; }
+  const len = Math.hypot(dx, dy) || 1;
+  return [-dy / len * off, dx / len * off];
+}
+// Point at parameter t on the same cubic edgePath draws, so a flow label can
+// sit on its own curve rather than being guessed at. Solved rather than
+// measured with getPointAtLength, because the path is labelled before it is in
+// the document. Parallel flows pass different t: separating them perpendicular
+// is not enough when the label is ~150px wide and the channel gap is 34px, so
+// they are staggered along the line as well.
+function edgeMid(sx, sy, ex, ey, back, off, t) {
   off = off || 0;
-  if (!back) return [(sx + ex) / 2, (sy + ey) / 2 + 0.75 * off];
-  const dip = 46 + Math.abs(sy - ey) * 0.2 + Math.abs(off);
-  const my = Math.max(sy, ey) + dip;
-  return [(sx + ex) / 2, (sy + ey + 6 * my) / 8];
+  t = (t === undefined) ? 0.5 : t;
+  // Same trap as edgeNormal: t is measured from the source, and a bidirectional
+  // pair has opposite sources, so t=0.39 on one is t=0.61 on the other and both
+  // labels land on the same point. Flip t for the non-canonical direction.
+  const rdx = ex - sx, rdy = ey - sy;
+  if (rdx < 0 || (rdx === 0 && rdy < 0)) t = 1 - t;
+  let p1x, p1y, p2x, p2y;
+  if (!back) {
+    const [px, py] = edgeNormal(sx, sy, ex, ey, off);
+    const mx = (sx + ex) / 2;
+    p1x = mx + px; p1y = sy + py; p2x = mx + px; p2y = ey + py;
+  } else {
+    const dip = 46 + Math.abs(sy - ey) * 0.2 + Math.abs(off);
+    const my = Math.max(sy, ey) + dip;
+    p1x = sx + 40; p1y = my; p2x = ex - 40; p2y = my;
+  }
+  const u = 1 - t, k0 = u * u * u, k1 = 3 * u * u * t, k2 = 3 * u * t * t, k3 = t * t * t;
+  return [k0 * sx + k1 * p1x + k2 * p2x + k3 * ex,
+          k0 * sy + k1 * p1y + k2 * p2y + k3 * ey];
 }
 // Two products can be joined by more than one flow (Purview both labels and
 // retains SharePoint content). Without a per-pair offset the curves and their
@@ -7884,6 +7960,10 @@ function renderAtlasEco(stage, panel, flows) {
       ? 'Map of how extensible each Microsoft Security product is, by operation type'
       : 'Map of how Microsoft Security products feed and control one another' });
   svg.appendChild(atlasArrowDefs());
+  // Flow labels collect here and are appended last. Left in their flow group
+  // they render under the product cards, and the two Copilot labels were being
+  // sliced in half by the card they point at.
+  const labelLayer = svgEl('g', { class: 'atlas-labellayer' });
 
   ATLAS_REGIONS.forEach(r => {
     svg.appendChild(svgEl('rect', { class: 'atlas-region', x: r.x, y: r.y, width: r.w, height: r.h, rx: 12 }));
@@ -7919,11 +7999,16 @@ function renderAtlasEco(stage, panel, flows) {
     // narrows to one product or one flow — which is when they want to read it.
     const touches = atlasSel && (f.from === atlasSel || f.to === atlasSel);
     if (!xray && (touches || active)) {
-      const [mx2, my2] = edgeMid(sx, sy, ex, ey, !!f.back, offs.get(f) || 0);
+      // Perpendicular separation alone is not enough: the channel gap is 34px
+      // and the labels are ~150px wide, so parallel flows are also staggered
+      // along their curve. The offset already encodes rank within the group.
+      const off2 = offs.get(f) || 0;
+      const tPos = Math.max(0.25, Math.min(0.75, 0.5 + (off2 / 34) * 0.22));
+      const [mx2, my2] = edgeMid(sx, sy, ex, ey, !!f.back, off2, tPos);
       const words = (f.verif === 'derived' ? '\u21e2 ' : '') + f.verb;
       const t = svgEl('text', { class: 'atlas-flowlabel atlas-t-' + f.type, x: mx2, y: my2 - 4 });
       t.textContent = words;
-      g.appendChild(t);
+      labelLayer.appendChild(t);
     }
     g.addEventListener('click', () => { atlasFlowSel = active ? null : key; renderAtlas(); });
     g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atlasFlowSel = active ? null : key; renderAtlas(); } });
@@ -8005,7 +8090,38 @@ function renderAtlasEco(stage, panel, flows) {
       svg.appendChild(bg);
     }
   });
+  svg.appendChild(labelLayer);
   stage.appendChild(svg);
+  // Per-pair offsets only separate labels within one flow group. Two labels
+  // from unrelated groups can still land on each other, so a final pass pushes
+  // any remaining overlaps apart. Runs after the svg is in the document because
+  // getBBox returns zeroes on a detached node.
+  atlasDeCollide(labelLayer);
+}
+
+function atlasDeCollide(layer) {
+  const nodes = [...layer.querySelectorAll('text')];
+  if (nodes.length < 2) return;
+  const boxes = nodes.map(n => {
+    const b = n.getBBox();
+    return { n, x: b.x, y: b.y, w: b.width, h: b.height, dy: 0 };
+  });
+  for (let pass = 0; pass < 8; pass++) {
+    let moved = false;
+    for (let i = 0; i < boxes.length; i++) for (let j = i + 1; j < boxes.length; j++) {
+      const a = boxes[i], c = boxes[j];
+      const ay = a.y + a.dy, cy = c.y + c.dy;
+      if (a.x < c.x + c.w && c.x < a.x + a.w && ay < cy + c.h && cy < ay + a.h) {
+        const push = (Math.min(ay + a.h, cy + c.h) - Math.max(ay, cy)) / 2 + 1.5;
+        if (ay <= cy) { a.dy -= push; c.dy += push; } else { a.dy += push; c.dy -= push; }
+        moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  boxes.forEach(b => {
+    if (b.dy) b.n.setAttribute('y', parseFloat(b.n.getAttribute('y')) + b.dy);
+  });
 }
 
 // Naive but adequate wrapper: SVG has no text wrapping and the taglines are
