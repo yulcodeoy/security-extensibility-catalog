@@ -2357,7 +2357,11 @@ html[data-theme="dark"] {
 .atlas-t-chip-respond.on { background: var(--at-respond); border-color: var(--at-respond); color: #1f0505; }
 .atlas-t-chip-ports.on { background: var(--at-port); border-color: var(--at-port); color: #04140c; }
 .atlas-stage { display: grid; grid-template-columns: 1fr 340px; gap: 14px; align-items: start; }
-@media (max-width: 1100px) { .atlas-stage { grid-template-columns: 1fr; } }
+/* With the rail taking 236px, keeping a 340px side panel left only ~765px of
+   canvas on a 1440 laptop and the node labels became unreadable. The chrome
+   around the canvas costs ~672px (gutters + rail + panel + gaps), so the side
+   panel only earns its place once that still leaves ~950px to draw in. */
+@media (max-width: 1620px) { .atlas-stage { grid-template-columns: 1fr; } }
 #view svg.atlas-svg { width: 100%; height: calc(100vh - 370px); min-height: 440px; max-height: 900px; display: block;
   background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 10px; }
 @media (max-width: 1100px) { #view svg.atlas-svg { height: 60vh; } }
@@ -2865,7 +2869,7 @@ footer { pointer-events: none; max-width: min(100%, var(--content-max)); }
    The map previously shipped with no key: the meaning of each line colour
    lived only in a title= tooltip. Both the key and the per-line claim are
    now on the page. */
-.atlas-legend { margin: 10px 0 12px; padding: 12px 14px; border: 1px solid var(--cp-border);
+.atlas-legend { margin: 10px 0 0; padding: 10px 14px; border: 1px solid var(--cp-border);
   border-radius: 10px; background: var(--cp-surface-2, var(--cp-surface)); }
 .atlas-legend-h { font-size: 12.5px; font-weight: 600; color: var(--cp-text);
   margin-bottom: 9px; letter-spacing: .01em; }
@@ -2898,6 +2902,105 @@ footer { pointer-events: none; max-width: min(100%, var(--content-max)); }
   .atlas-legend-grid { grid-template-columns: 1fr; }
   .atlas-legend { padding: 10px 11px; }
 }
+
+/* ---------------------------------------------------------------------------
+   Atlas shell. The view used to be a vertical stack -- intro, tab row, control
+   strip, 192px legend band -- which put the map itself at y=786 on a 1200px
+   screen. Controls now live in a persistent left rail so the canvas owns the
+   fold, and the four plates read as a labelled list rather than anonymous tabs.
+   --------------------------------------------------------------------------- */
+.atlas-head { margin: 0 0 12px; }
+.atlas-head-row { display: flex; align-items: baseline; gap: 16px; flex-wrap: wrap; }
+.atlas-h { margin: 0; font-size: 21px; letter-spacing: -.01em; }
+.atlas-stats { display: flex; gap: 14px; flex-wrap: wrap; }
+.atlas-stat { font-size: 11.5px; color: var(--cp-text-soft); white-space: nowrap; }
+.atlas-stat b { font-size: 14px; color: var(--cp-text); font-weight: 650; margin-right: 4px; }
+.atlas-sub { margin: 6px 0 0; font-size: 13px; color: var(--cp-text-soft); line-height: 1.55; max-width: 92ch; }
+.atlas-head .conn-details { margin-top: 7px; }
+
+.atlas-shell { display: grid; grid-template-columns: 236px minmax(0, 1fr); gap: 18px; align-items: start; }
+.atlas-main { min-width: 0; }
+.atlas-rail { position: sticky; top: 12px; display: flex; flex-direction: column; gap: 16px; }
+.atlas-railsec { display: flex; flex-direction: column; gap: 7px; }
+.atlas-railh { font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--cp-text-soft); font-weight: 650; }
+.atlas-viewbtn { display: block; width: 100%; text-align: left; cursor: pointer;
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--cp-border);
+  background: var(--cp-surface); color: var(--cp-text); }
+.atlas-viewbtn b { display: block; font-size: 12.5px; font-weight: 620; }
+.atlas-viewbtn span { display: block; margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--cp-muted); }
+.atlas-viewbtn:hover { border-color: var(--cp-accent); }
+.atlas-viewbtn.on { border-color: var(--cp-accent); background: var(--cp-surface-soft);
+  box-shadow: inset 3px 0 0 var(--cp-accent); }
+.atlas-viewbtn.on b { color: var(--cp-accent); }
+.atlas-railselect { width: 100%; }
+.atlas-reset { margin-top: 2px; font-size: 11.5px; padding: 6px 10px; cursor: pointer;
+  border-radius: 7px; border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text-soft); }
+.atlas-reset:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.atlas-rail .atlas-ctlgroup { gap: 5px; }
+
+/* #view svg { width:100%; height:100% } outranks any class selector, so the
+   swatches only ever kept their size because the legend grid track pinned them.
+   In a flex row they blew up to 400x127. Match the id specificity. */
+#view .atlas-legend-sw { width: 46px; height: 14px; flex: none; }
+#view .atlas-key .atlas-legend-sw { width: 34px; height: 12px; margin: 0; flex: none; }
+
+/* Compact key, docked under the map it explains. */
+.atlas-key { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; }
+.atlas-key-item { display: inline-flex; align-items: center; gap: 6px; }
+.atlas-key-item span { font-size: 11.5px; color: var(--cp-text-soft); white-space: nowrap; }
+.atlas-key .atlas-legend-sw { width: 34px; height: 12px; margin: 0; }
+.atlas-key-tip { font-size: 11.5px; color: var(--cp-muted); font-style: italic; margin-left: auto; }
+.atlas-legend-det { margin-top: 9px; }
+.atlas-legend-det > summary { cursor: pointer; font-size: 11.5px; color: var(--cp-text-soft); }
+.atlas-legend-det > summary:hover { color: var(--cp-accent); }
+.atlas-legend-det .atlas-legend-grid { margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--cp-border); }
+
+@media (max-width: 1180px) {
+  .atlas-shell { grid-template-columns: 1fr; }
+  .atlas-rail { position: static; flex-direction: row; flex-wrap: wrap; gap: 14px 22px;
+    padding: 10px 12px; border: 1px solid var(--cp-border); border-radius: 8px;
+    background: var(--cp-surface-soft); }
+  .atlas-railsec { flex: 1 1 220px; }
+  .atlas-viewbtn span { display: none; }
+  .atlas-key-tip { margin-left: 0; flex-basis: 100%; }
+}
+
+/* ---------------------------------------------------------------------------
+   The text rendering of every claim. It was an undifferentiated wall: a run of
+   h4s and full-width paragraph blocks with bulleted evidence lists, so 23 flows
+   read as one long column with no scanning structure.
+   --------------------------------------------------------------------------- */
+.claim-head { margin: 34px 0 14px; padding-top: 18px; border-top: 1px solid var(--cp-border); }
+.claim-head h3 { margin: 0 0 4px; font-size: 17px; }
+.claim-head p { margin: 0; font-size: 12.5px; color: var(--cp-text-soft); line-height: 1.55; max-width: 80ch; }
+.claim-group { margin: 0 0 22px; }
+.claim-grouph { display: flex; align-items: center; gap: 10px; margin: 0 0 9px; }
+.claim-grouph-t { font-size: 13px; font-weight: 650; color: var(--cp-text); }
+.claim-count { font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--cp-text-soft); border: 1px solid var(--cp-border); border-radius: 999px; padding: 1px 8px; }
+.claim-grouph::after { content: ''; flex: 1; height: 1px; background: var(--cp-border); }
+.claim-grid { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); }
+.claim { border: 1px solid var(--cp-border); border-left: 3px solid var(--cp-border);
+  border-radius: 8px; padding: 10px 12px; background: var(--cp-surface); }
+.claim-verified { border-left-color: var(--cp-accent); }
+.claim-derived { border-left-color: var(--cp-text-soft); border-left-style: dashed; }
+.claim-gap { border-left-color: var(--at-port, var(--cp-text-soft)); }
+.claim-h { margin: 0 0 5px; font-size: 13px; line-height: 1.4; }
+.claim-verb { font-weight: 650; color: var(--cp-text); }
+.claim-to { color: var(--cp-accent); font-weight: 600; }
+.claim-what { margin: 0 0 6px; font-size: 12.5px; line-height: 1.5; color: var(--cp-text-soft); }
+.claim-meta { margin: 0; font-size: 11.5px; color: var(--cp-muted); line-height: 1.6; }
+.claim-meta span { font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--cp-text-soft); margin-right: 4px; }
+.claim-meta span:not(:first-child) { margin-left: 10px; }
+.claim-evlabel { margin: 8px 0 4px; font-size: 9.5px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--cp-text-soft); }
+.claim-evs { display: flex; flex-wrap: wrap; gap: 4px; }
+.claim-ev { font-size: 11px; padding: 2px 8px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--cp-border); background: var(--cp-surface-soft); color: var(--cp-text-soft);
+  text-decoration: none; }
+.claim-ev:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
 </style>
 <!-- d3@7.9.0 (externalized to cdn.jsdelivr.net to avoid OneDrive malware-scanner false-positive on inlined minified JS). Needs internet on first load; cached after. -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" crossorigin="anonymous"></script>
@@ -7769,14 +7872,23 @@ function renderAtlas() {
   const flows = atlasFlows();
   const spanning = atlasScenariosSpanning();
 
-  v.appendChild(el('div', { class: 'conn-intro', html:
-    `<h2 style="margin:0 0 6px;">\u{1F5FA}\uFE0F Security Atlas \u2014 the system, as it functions</h2>
-     <p class="conn-sub">Signal moves left \u2192 right toward the SOC; policy runs outward from Purview and Entra;
-     enforcement returns to the estate. <strong>${FAMILIES.length} products</strong>,
-     <strong>${flows.filter(f => f.verif === 'verified').length} verified</strong> and
-     <strong>${flows.filter(f => f.verif === 'derived').length} derived</strong> directed flows,
-     <strong>${NOT_EXTENSIBLE.length}</strong> documented gaps.
-     ${spanning.length} of ${SCENARIOS.length} scenarios span more than one product.</p>
+  // The header is deliberately short. The map is the product; a screen and a
+  // half of preamble above it pushed the artefact itself below the fold.
+  const stat = (n, l) => `<span class="atlas-stat"><b>${n}</b>${l}</span>`;
+  v.appendChild(el('div', { class: 'atlas-head', html:
+    `<div class="atlas-head-row">
+       <h2 class="atlas-h">Security Atlas</h2>
+       <div class="atlas-stats">
+         ${stat(FAMILIES.length, 'products')}
+         ${stat(flows.filter(f => f.verif === 'verified').length, 'verified flows')}
+         ${stat(flows.filter(f => f.verif === 'derived').length, 'derived')}
+         ${stat(NOT_EXTENSIBLE.length, 'documented gaps')}
+         ${stat(spanning.length, 'traceable scenarios')}
+       </div>
+     </div>
+     <p class="atlas-sub">The Microsoft Security estate as a working system \u2014 what moves, which way, and what
+     causes it. Signal runs left \u2192 right toward the SOC, policy runs outward from Purview and Entra, and
+     enforcement returns to the estate.</p>
      <details class="conn-details"><summary>How to read this, and what is curated</summary>
        <p>Every line answers three questions: <em>what moves</em>, <em>which way</em>, and <em>what causes it</em>.
        The arrows are <strong>hand-authored editorial</strong> \u2014 the catalog data records that two products appear in
@@ -7793,22 +7905,40 @@ function renderAtlas() {
        The Entra arrows that <em>are</em> drawn carry a specific claim beyond authentication.</p>
      </details>` }));
 
-  // ---- controls
-  const bar = el('div', { class: 'atlas-bar' });
-  const PLATES = [
-    { id: 'eco', label: '\u25CE Ecosystem', hint: 'The whole system on one plate' },
-    { id: 'anatomy', label: '\u271A Product anatomy', hint: 'What enters a product, what it does, what leaves' },
-    { id: 'trace', label: '\u2192 Scenario trace', hint: 'Light up the products a real scenario crosses' },
-    { id: 'xray', label: '\u25EB Extensibility X-ray', hint: 'Everything you can build against, on every product at once' }
-  ];
-  PLATES.forEach(p => bar.appendChild(el('button', {
-    class: 'sys-modebtn' + (atlasPlate === p.id ? ' on' : ''), title: p.hint,
-    onclick: () => { atlasPlate = p.id; renderAtlas(); } }, p.label)));
-  v.appendChild(bar);
+  // ---- shell: controls in a left rail, map in the main column. The four
+  // plates used to be an anonymous row of tabs above everything, so "Scenario
+  // trace" was jargon whose only explanation was a title= tooltip.
+  const shell = el('div', { class: 'atlas-shell' });
+  const rail = el('div', { class: 'atlas-rail' });
+  const main = el('div', { class: 'atlas-main' });
+  shell.appendChild(rail); shell.appendChild(main);
+  v.appendChild(shell);
 
-  const ctl = el('div', { class: 'atlas-ctl' });
+  const railSec = (title) => {
+    const s = el('div', { class: 'atlas-railsec' });
+    s.appendChild(el('div', { class: 'atlas-railh' }, title));
+    rail.appendChild(s);
+    return s;
+  };
+
+  const PLATES = [
+    { id: 'eco', label: 'Ecosystem', icon: '\u25CE', hint: 'The whole system on one plate' },
+    { id: 'anatomy', label: 'Product anatomy', icon: '\u271A', hint: 'What enters one product, what it does, what leaves' },
+    { id: 'trace', label: 'Scenario trace', icon: '\u2192', hint: 'Light up only the products one real scenario crosses' },
+    { id: 'xray', label: 'Extensibility X-ray', icon: '\u25EB', hint: 'Everything you can build against, every product at once' }
+  ];
+  const vsec = railSec('View');
+  PLATES.forEach(p => {
+    const b = el('button', { class: 'atlas-viewbtn' + (atlasPlate === p.id ? ' on' : ''),
+      'aria-pressed': atlasPlate === p.id ? 'true' : 'false',
+      onclick: () => { atlasPlate = p.id; renderAtlas(); } });
+    b.appendChild(el('b', {}, p.icon + '\u2002' + p.label));
+    b.appendChild(el('span', {}, p.hint));
+    vsec.appendChild(b);
+  });
+
+  const layerSec = railSec('System layers');
   const layerWrap = el('div', { class: 'atlas-ctlgroup' });
-  layerWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'System layers'));
   Object.keys(ATLAS_TYPES).forEach(t => {
     const on = atlasLayers[t];
     layerWrap.appendChild(el('button', { class: 'atlas-chip atlas-t-chip-' + t + (on ? ' on' : ''),
@@ -7822,36 +7952,31 @@ function renderAtlas() {
       title: 'Show the featured API/SDK ports on each product',
       onclick: () => { atlasLayers.ports = !atlasLayers.ports; renderAtlas(); } }, 'Extensibility ports'));
   }
-  ctl.appendChild(layerWrap);
+  layerSec.appendChild(layerWrap);
 
+  const vSec = railSec('Verification');
   const vWrap = el('div', { class: 'atlas-ctlgroup' });
-  vWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'Verification'));
   [['verified', 'verified \u00b7 curated'], ['derived', 'derived \u00b7 inferred']].forEach(([k, lbl]) => {
     vWrap.appendChild(el('button', { class: 'atlas-chip atlas-v-' + k + (atlasVerif[k] ? ' on' : ''),
       onclick: () => { atlasVerif[k] = !atlasVerif[k]; renderAtlas(); } }, lbl));
   });
-  ctl.appendChild(vWrap);
+  vSec.appendChild(vWrap);
 
-  const sWrap = el('div', { class: 'atlas-ctlgroup' });
-  sWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'Scenario trace'));
-  const sel = el('select', { class: 'sys-select', onchange: e => { atlasScenario = e.target.value; if (atlasScenario) atlasPlate = 'trace'; renderAtlas(); } });
+  const sSec = railSec('Scenario trace');
+  const sel = el('select', { class: 'sys-select atlas-railselect', onchange: e => { atlasScenario = e.target.value; if (atlasScenario) atlasPlate = 'trace'; renderAtlas(); } });
   sel.appendChild(el('option', { value: '' }, 'All scenarios (no trace)'));
   spanning.forEach(sc => {
     const o = el('option', { value: sc.id }, sc.label.replace(/^[^\w(]+\s*/, ''));
     if (sc.id === atlasScenario) o.selected = true;
     sel.appendChild(o);
   });
-  sWrap.appendChild(sel);
+  sSec.appendChild(sel);
   if (atlasSel || atlasScenario || atlasFlowSel) {
-    sWrap.appendChild(el('button', { class: 'atlas-chip', onclick: () => { atlasSel = null; atlasScenario = ''; atlasFlowSel = null; renderAtlas(); } }, 'Reset'));
+    sSec.appendChild(el('button', { class: 'atlas-reset', onclick: () => { atlasSel = null; atlasScenario = ''; atlasFlowSel = null; renderAtlas(); } }, '\u21ba  Reset selection'));
   }
-  ctl.appendChild(sWrap);
-  v.appendChild(ctl);
-
-  if (atlasPlate !== 'xray') v.appendChild(atlasLegend());
 
   const stage = el('div', { class: 'atlas-stage' });
-  v.appendChild(stage);
+  main.appendChild(stage);
   const panel = el('div', { class: 'atlas-panel' });
 
   if (atlasPlate === 'anatomy') renderAtlasAnatomy(stage, panel, flows);
@@ -7874,6 +7999,12 @@ function renderAtlas() {
      only those can be traced.</p></div>`;
   }
 
+  // The key belongs next to the thing it explains. As a full-width band above
+  // the map it was 192px tall and, at 1920px, spread its seven items across
+  // 1680px -- so related entries sat 1400px apart and the map itself started
+  // below the fold.
+  if (atlasPlate !== 'xray') main.appendChild(atlasLegend());
+
   // The map is a picture; this is the same content in text, for keyboard users,
   // for screen readers and for anyone who needs to copy a claim out.
   v.appendChild(atlasTextFallback(flows));
@@ -7884,8 +8015,10 @@ function renderAtlas() {
 // and two line styles are not self-evident, so the meaning is now on the page.
 function atlasLegend() {
   const wrap = el('div', { class: 'atlas-legend' });
-  wrap.appendChild(el('div', { class: 'atlas-legend-h' },
-    'How to read a line \u2014 every line is a directed claim: A does something to B.'));
+  // Two tiers: a one-line key that sits under the map permanently, and the full
+  // prose behind a disclosure. Everyone needs to know which colour is which;
+  // almost nobody needs the paragraph twice.
+  const keyrow = el('div', { class: 'atlas-key' });
   const grid = el('div', { class: 'atlas-legend-grid' });
 
   // One defs block with its own ID prefix, carried by the first swatch rather
@@ -7908,8 +8041,15 @@ function atlasLegend() {
     return s;
   };
 
+  const keyItem = (sw, label) => {
+    const i = el('div', { class: 'atlas-key-item' });
+    i.appendChild(sw); i.appendChild(el('span', {}, label));
+    return i;
+  };
+
   Object.keys(ATLAS_TYPES).forEach(t => {
     const T = ATLAS_TYPES[t];
+    keyrow.appendChild(keyItem(swatch(t, T.dash, T.width || 1.5, false), T.label));
     const row = el('div', { class: 'atlas-legend-row' + (atlasLayers[t] ? '' : ' off') });
     row.appendChild(swatch(t, T.dash, T.width || 1.5, false));
     const txt = el('div', {});
@@ -7920,6 +8060,7 @@ function atlasLegend() {
   });
 
   const derivedRow = el('div', { class: 'atlas-legend-row' });
+  keyrow.appendChild(keyItem(swatch('respond', '', 3.2, true), 'derived'));
   derivedRow.appendChild(swatch('respond', '', 3.2, true));
   const dt = el('div', {});
   dt.appendChild(el('b', {}, 'Dotted \u2014 derived, not documented'));
@@ -7928,25 +8069,32 @@ function atlasLegend() {
   grid.appendChild(derivedRow);
 
   const gapRow = el('div', { class: 'atlas-legend-row' });
-  const gs = svgEl('svg', { class: 'atlas-legend-sw', viewBox: '0 0 46 14', 'aria-hidden': 'true' });
-  const gg = svgEl('g', { class: 'atlas-gapmark' });
-  gg.appendChild(svgEl('circle', { cx: 17, cy: 7, r: 6.5 }));
-  const gq = svgEl('text', { class: 'atlas-gapq', x: 17, y: 7 });
-  gq.textContent = '?';
-  gg.appendChild(gq);
-  gs.appendChild(gg);
-  gapRow.appendChild(gs);
+  const gapSw = () => {
+    const s = svgEl('svg', { class: 'atlas-legend-sw', viewBox: '0 0 46 14', 'aria-hidden': 'true' });
+    const g = svgEl('g', { class: 'atlas-gapmark' });
+    g.appendChild(svgEl('circle', { cx: 17, cy: 7, r: 6.5 }));
+    const q = svgEl('text', { class: 'atlas-gapq', x: 17, y: 7 });
+    q.textContent = '?';
+    g.appendChild(q); s.appendChild(g);
+    return s;
+  };
+  keyrow.appendChild(keyItem(gapSw(), 'documented gap'));
+  gapRow.appendChild(gapSw());
   const gt = el('div', {});
   gt.appendChild(el('b', {}, '? \u2014 documented gap'));
   gt.appendChild(el('span', {}, 'Something on this product is not publicly extensible. Shown as a marker, never as a line \u2014 a line would imply a path that does not exist.'));
   gapRow.appendChild(gt);
   grid.appendChild(gapRow);
 
-  wrap.appendChild(grid);
-  wrap.appendChild(el('div', { class: 'atlas-legend-tip' },
+  wrap.appendChild(keyrow);
+  keyrow.appendChild(el('span', { class: 'atlas-key-tip' },
     atlasSel
-      ? 'Showing only what touches the selected product, with each line\u2019s claim written on it. Reset above to see the whole estate.'
-      : 'Select a product to hide every unrelated line and write each remaining claim onto its line.'));
+      ? 'Showing only what touches the selected product, each line\u2019s claim written on it.'
+      : 'Select a product to hide unrelated lines and write each claim onto its line.'));
+  const det = el('details', { class: 'atlas-legend-det' });
+  det.appendChild(el('summary', {}, 'What each line means \u2014 every line is a directed claim: A does something to B'));
+  det.appendChild(grid);
+  wrap.appendChild(det);
   return wrap;
 }
 
@@ -8381,29 +8529,44 @@ function atlasTextFallback(flows) {
   const byFrom = {};
   flows.forEach(f => (byFrom[f.from] = byFrom[f.from] || []).push(f));
   const sections = FAMILIES.filter(f => byFrom[f.id]).map(fam => `
-    <h4 class="conn-flow-group">${fam.emoji} ${connEsc(fam.label)} feeds\u2026</h4>
-    ${byFrom[fam.id].map(f => {
-      const ev = (f.evidence || []).filter(sid => S[sid])
-        .map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a></li>`).join('');
-      return `<div class="conn-flow">
-        <p class="conn-flow-head"><strong>${connEsc(f.verb)}</strong> ${connEsc(FAMILY_BY_ID[f.to].label)}
-          <span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span></p>
-        <p class="conn-flow-what">${connEsc(f.what)}</p>
-        ${f.moves ? `<p class="conn-flow-what"><em>Moves:</em> ${connEsc(f.moves)} \u00b7 <em>Cadence:</em> ${connEsc(f.cadence || '\u2014')}</p>` : ''}
-        ${ev ? `<p class="conn-flow-evlabel">Evidence in this catalog</p><ul class="conn-list conn-flow-ev">${ev}</ul>` : ''}
-      </div>`;
-    }).join('')}`).join('');
-  const gapHtml = NOT_EXTENSIBLE.map(g => `<div class="conn-flow"><p class="conn-flow-head"><strong>? ${connEsc(g.label)}</strong>
-      <span class="atlas-badge atlas-v-gap">not extensible</span></p>
-      <p class="conn-flow-what">${connEsc(g.why)}</p>
-      <p class="conn-flow-what"><em>Workaround:</em> ${connEsc(g.workaround)}</p></div>`).join('');
+    <section class="claim-group">
+      <h4 class="claim-grouph">
+        <span class="claim-grouph-t">${fam.emoji} ${connEsc(fam.label)}</span>
+        <span class="claim-count">${byFrom[fam.id].length} outgoing</span>
+      </h4>
+      <div class="claim-grid">
+      ${byFrom[fam.id].map(f => {
+        const ev = (f.evidence || []).filter(sid => S[sid])
+          .map(sid => `<a class="claim-ev" href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a>`).join('');
+        return `<article class="claim claim-${f.verif}">
+          <p class="claim-h"><span class="claim-verb">${connEsc(f.verb)}</span>
+            <span class="claim-to">${connEsc(FAMILY_BY_ID[f.to].label)}</span>
+            <span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span></p>
+          <p class="claim-what">${connEsc(f.what)}</p>
+          ${f.moves ? `<p class="claim-meta"><span>Moves</span> ${connEsc(f.moves)}
+             <span>Cadence</span> ${connEsc(f.cadence || '\u2014')}</p>` : ''}
+          ${ev ? `<p class="claim-evlabel">Evidence in this catalog</p><div class="claim-evs">${ev}</div>` : ''}
+        </article>`;
+      }).join('')}
+      </div>
+    </section>`).join('');
+  const gapHtml = NOT_EXTENSIBLE.map(g => `<article class="claim claim-gap">
+      <p class="claim-h"><span class="claim-verb">${connEsc(g.label)}</span>
+        <span class="atlas-badge atlas-v-gap">not extensible</span></p>
+      <p class="claim-what">${connEsc(g.why)}</p>
+      <p class="claim-meta"><span>Workaround</span> ${connEsc(g.workaround)}</p></article>`).join('');
   return el('div', { class: 'conn-flows-wrap', html:
-    `<h3 style="margin:26px 0 6px;">\u2794 Every claim on this map, in text <span class="conn-curated-inline">curated, not derived</span></h3>
-     <p class="conn-sub" style="margin-top:0;">The same directed claims and the same evidence, readable without the diagram.</p>
+    `<div class="claim-head">
+       <h3>Every claim on this map, in text</h3>
+       <p>The same directed claims and the same evidence, readable without the diagram \u2014 and copyable.
+       Curated, not derived.</p>
+     </div>
      ${sections}
-     <h3 style="margin:26px 0 6px;">? What is <em>not</em> publicly extensible</h3>
-     <p class="conn-sub" style="margin-top:0;">Drawn on the map as markers, never as lines \u2014 a line would imply a path that does not exist.</p>
-     ${gapHtml}` });
+     <div class="claim-head claim-head-gap">
+       <h3>What is <em>not</em> publicly extensible</h3>
+       <p>Drawn on the map as <code>?</code> markers, never as lines \u2014 a line would imply a path that does not exist.</p>
+     </div>
+     <div class="claim-grid">${gapHtml}</div>` });
 }
 
 window.__connFilterTo = fid => {
