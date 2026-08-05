@@ -2860,6 +2860,44 @@ footer { pointer-events: none; max-width: min(100%, var(--content-max)); }
   .header-actions > button { flex: 0 1 auto; }
 }
 
+
+/* --- Atlas legend + flow labels ------------------------------------------
+   The map previously shipped with no key: the meaning of each line colour
+   lived only in a title= tooltip. Both the key and the per-line claim are
+   now on the page. */
+.atlas-legend { margin: 10px 0 12px; padding: 12px 14px; border: 1px solid var(--cp-border);
+  border-radius: 10px; background: var(--cp-surface-2, var(--cp-surface)); }
+.atlas-legend-h { font-size: 12.5px; font-weight: 600; color: var(--cp-text);
+  margin-bottom: 9px; letter-spacing: .01em; }
+.atlas-legend-grid { display: grid; gap: 7px 22px;
+  grid-template-columns: repeat(auto-fit, minmax(310px, 1fr)); }
+.atlas-legend-row { display: grid; grid-template-columns: 46px 1fr; gap: 9px;
+  align-items: start; transition: opacity .12s; }
+.atlas-legend-row.off { opacity: .32; }
+.atlas-legend-sw { width: 46px; height: 14px; margin-top: 3px; flex: none; overflow: visible; }
+.atlas-legend-row b { display: block; font-size: 12px; font-weight: 650; color: var(--cp-text); }
+.atlas-legend-row span { display: block; font-size: 11.5px; line-height: 1.45; color: var(--cp-muted); }
+.atlas-legend-tip { margin-top: 10px; padding-top: 9px; border-top: 1px dashed var(--cp-border);
+  font-size: 11.5px; color: var(--cp-muted); }
+.atlas-legend .atlas-gapmark circle { cursor: default; }
+.atlas-legend .atlas-gapq { font-size: 9px; text-anchor: middle; dominant-baseline: central; }
+
+/* Flow verbs, drawn only for the flows the reader has narrowed to. The halo
+   keeps them legible where a label has to cross another line. */
+.atlas-flowlabel { font-size: 10.5px; font-weight: 600; text-anchor: middle;
+  paint-order: stroke; stroke: var(--cp-surface); stroke-width: 3.5px;
+  stroke-linejoin: round; pointer-events: none; }
+.atlas-flow .atlas-flowlabel { fill: currentColor; }
+.atlas-flowlabel.atlas-t-policy   { fill: var(--at-policy);   stroke: var(--cp-surface); }
+.atlas-flowlabel.atlas-t-signal   { fill: var(--at-signal);   stroke: var(--cp-surface); }
+.atlas-flowlabel.atlas-t-identity { fill: var(--at-identity); stroke: var(--cp-surface); }
+.atlas-flowlabel.atlas-t-detect   { fill: var(--at-detect);   stroke: var(--cp-surface); }
+.atlas-flowlabel.atlas-t-respond  { fill: var(--at-respond);  stroke: var(--cp-surface); }
+
+@media (max-width: 820px) {
+  .atlas-legend-grid { grid-template-columns: 1fr; }
+  .atlas-legend { padding: 10px 11px; }
+}
 </style>
 <!-- d3@7.9.0 (externalized to cdn.jsdelivr.net to avoid OneDrive malware-scanner false-positive on inlined minified JS). Needs internet on first load; cached after. -->
 <script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js" crossorigin="anonymous"></script>
@@ -7575,6 +7613,16 @@ function edgePath(sx, sy, ex, ey, back, off) {
   const my = Math.max(sy, ey) + dip;
   return `M ${sx} ${sy} C ${sx + 40} ${my} ${ex - 40} ${my} ${ex} ${ey}`;
 }
+// Midpoint of the cubic used by edgePath, so a flow label can sit on its own
+// curve rather than being guessed at. Solved at t=0.5 rather than measured with
+// getPointAtLength, because the path is labelled before it is in the document.
+function edgeMid(sx, sy, ex, ey, back, off) {
+  off = off || 0;
+  if (!back) return [(sx + ex) / 2, (sy + ey) / 2 + 0.75 * off];
+  const dip = 46 + Math.abs(sy - ey) * 0.2 + Math.abs(off);
+  const my = Math.max(sy, ey) + dip;
+  return [(sx + ex) / 2, (sy + ey + 6 * my) / 8];
+}
 // Two products can be joined by more than one flow (Purview both labels and
 // retains SharePoint content). Without a per-pair offset the curves and their
 // labels land on identical coordinates and the text becomes unreadable.
@@ -7724,6 +7772,8 @@ function renderAtlas() {
   ctl.appendChild(sWrap);
   v.appendChild(ctl);
 
+  if (atlasPlate !== 'xray') v.appendChild(atlasLegend());
+
   const stage = el('div', { class: 'atlas-stage' });
   v.appendChild(stage);
   const panel = el('div', { class: 'atlas-panel' });
@@ -7751,6 +7801,77 @@ function renderAtlas() {
   // The map is a picture; this is the same content in text, for keyboard users,
   // for screen readers and for anyone who needs to copy a claim out.
   v.appendChild(atlasTextFallback(flows));
+}
+
+// The map used to ship with no key at all: the only place that said what a
+// gold dashed line meant was a title= tooltip on a filter chip. Five colours
+// and two line styles are not self-evident, so the meaning is now on the page.
+function atlasLegend() {
+  const wrap = el('div', { class: 'atlas-legend' });
+  wrap.appendChild(el('div', { class: 'atlas-legend-h' },
+    'How to read a line \u2014 every line is a directed claim: A does something to B.'));
+  const grid = el('div', { class: 'atlas-legend-grid' });
+
+  // One defs block with its own ID prefix, carried by the first swatch rather
+  // than a separate element. Re-emitting atlasArrowDefs() per swatch would put
+  // eight duplicate #atlasarrow-* IDs in the document and the real map's
+  // markers would start resolving to a legend swatch.
+  let lgDefs = svgEl('defs');
+  lgDefs.innerHTML = Object.keys(ATLAS_TYPES).map(t =>
+    `<marker id="lgarrow-${t}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+       orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class="atlas-head atlas-t-${t}"/></marker>`).join('');
+
+  const swatch = (type, dash, width, derived) => {
+    const s = svgEl('svg', { class: 'atlas-legend-sw', viewBox: '0 0 46 14', 'aria-hidden': 'true' });
+    if (lgDefs) { s.appendChild(lgDefs); lgDefs = null; }
+    s.appendChild(svgEl('path', {
+      class: 'atlas-line atlas-t-' + type + (derived ? ' atlas-derived' : ''),
+      d: 'M 1 7 L 33 7', 'stroke-width': width,
+      'stroke-dasharray': derived ? '2 6' : (dash || ''),
+      'marker-end': 'url(#lgarrow-' + type + ')' }));
+    return s;
+  };
+
+  Object.keys(ATLAS_TYPES).forEach(t => {
+    const T = ATLAS_TYPES[t];
+    const row = el('div', { class: 'atlas-legend-row' + (atlasLayers[t] ? '' : ' off') });
+    row.appendChild(swatch(t, T.dash, T.width || 1.5, false));
+    const txt = el('div', {});
+    txt.appendChild(el('b', {}, T.label));
+    txt.appendChild(el('span', {}, T.note));
+    row.appendChild(txt);
+    grid.appendChild(row);
+  });
+
+  const derivedRow = el('div', { class: 'atlas-legend-row' });
+  derivedRow.appendChild(swatch('respond', '', 3.2, true));
+  const dt = el('div', {});
+  dt.appendChild(el('b', {}, 'Dotted \u2014 derived, not documented'));
+  dt.appendChild(el('span', {}, 'Supported by response scenarios and action surfaces in this catalog, but not asserted as a documented flow. Filter it off above.'));
+  derivedRow.appendChild(dt);
+  grid.appendChild(derivedRow);
+
+  const gapRow = el('div', { class: 'atlas-legend-row' });
+  const gs = svgEl('svg', { class: 'atlas-legend-sw', viewBox: '0 0 46 14', 'aria-hidden': 'true' });
+  const gg = svgEl('g', { class: 'atlas-gapmark' });
+  gg.appendChild(svgEl('circle', { cx: 17, cy: 7, r: 6.5 }));
+  const gq = svgEl('text', { class: 'atlas-gapq', x: 17, y: 7 });
+  gq.textContent = '?';
+  gg.appendChild(gq);
+  gs.appendChild(gg);
+  gapRow.appendChild(gs);
+  const gt = el('div', {});
+  gt.appendChild(el('b', {}, '? \u2014 documented gap'));
+  gt.appendChild(el('span', {}, 'Something on this product is not publicly extensible. Shown as a marker, never as a line \u2014 a line would imply a path that does not exist.'));
+  gapRow.appendChild(gt);
+  grid.appendChild(gapRow);
+
+  wrap.appendChild(grid);
+  wrap.appendChild(el('div', { class: 'atlas-legend-tip' },
+    atlasSel
+      ? 'Showing only what touches the selected product, with each line\u2019s claim written on it. Reset above to see the whole estate.'
+      : 'Select a product to hide every unrelated line and write each remaining claim onto its line.'));
+  return wrap;
 }
 
 function renderAtlasEco(stage, panel, flows) {
@@ -7793,6 +7914,17 @@ function renderAtlasEco(stage, panel, flows) {
     g.appendChild(p);
     const hit = svgEl('path', { class: 'atlas-hit', d: p.getAttribute('d') });
     g.appendChild(hit);
+    // A line with no words on it is not a claim, it is decoration. Labelling all
+    // 20 at once is unreadable, so the verb appears as soon as the reader
+    // narrows to one product or one flow — which is when they want to read it.
+    const touches = atlasSel && (f.from === atlasSel || f.to === atlasSel);
+    if (!xray && (touches || active)) {
+      const [mx2, my2] = edgeMid(sx, sy, ex, ey, !!f.back, offs.get(f) || 0);
+      const words = (f.verif === 'derived' ? '\u21e2 ' : '') + f.verb;
+      const t = svgEl('text', { class: 'atlas-flowlabel atlas-t-' + f.type, x: mx2, y: my2 - 4 });
+      t.textContent = words;
+      g.appendChild(t);
+    }
     g.addEventListener('click', () => { atlasFlowSel = active ? null : key; renderAtlas(); });
     g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atlasFlowSel = active ? null : key; renderAtlas(); } });
     svg.appendChild(g);
