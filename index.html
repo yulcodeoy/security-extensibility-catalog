@@ -2326,6 +2326,222 @@ header .header-actions {
 .conn-flow-ev { font-size: 12.5px; }
 .conn-flow-group { margin: 18px 0 8px; font-size: 13.5px; }
 
+/* ---- Atlas: the systems view ---- */
+/* Line colour carries meaning, so both themes need a set that stays legible on
+   its own background. Do not collapse these to one palette. */
+:root {
+  --at-policy: #b07d1a; --at-signal: #1f6fd0; --at-identity: #6d4bc4;
+  --at-detect: #c2560c; --at-respond: #b53434; --at-unclassified: #8a8a8a;
+  --at-region: #d8dde4; --at-port: #1a7f4f;
+}
+html[data-theme="dark"] {
+  --at-policy: #e0b25a; --at-signal: #7fb4e0; --at-identity: #a094d8;
+  --at-detect: #e08a7a; --at-respond: #d46a6a; --at-unclassified: #97a3b3;
+  --at-region: #2c3644; --at-port: #74c69d;
+}
+.atlas-bar { display: flex; gap: 6px; margin: 12px 0 8px; flex-wrap: wrap; }
+.atlas-ctl { display: flex; gap: 18px; flex-wrap: wrap; align-items: center;
+  padding: 9px 12px; margin-bottom: 10px; border: 1px solid var(--cp-border);
+  border-radius: 8px; background: var(--cp-surface-soft); }
+.atlas-ctlgroup { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.atlas-ctllabel { font-size: 10px; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--cp-text-soft); margin-right: 2px; }
+.atlas-chip { font-size: 11.5px; padding: 4px 9px; border-radius: 20px; cursor: pointer;
+  border: 1px solid var(--cp-border); background: var(--cp-surface); color: var(--cp-text-soft); }
+.atlas-chip:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.atlas-chip.on { background: var(--cp-accent); color: var(--cp-bg); border-color: var(--cp-accent); font-weight: 600; }
+.atlas-t-chip-policy.on { background: var(--at-policy); border-color: var(--at-policy); color: #1a1204; }
+.atlas-t-chip-signal.on { background: var(--at-signal); border-color: var(--at-signal); color: #04121f; }
+.atlas-t-chip-identity.on { background: var(--at-identity); border-color: var(--at-identity); color: #100a1f; }
+.atlas-t-chip-detect.on { background: var(--at-detect); border-color: var(--at-detect); color: #1f0c04; }
+.atlas-t-chip-respond.on { background: var(--at-respond); border-color: var(--at-respond); color: #1f0505; }
+.atlas-t-chip-ports.on { background: var(--at-port); border-color: var(--at-port); color: #04140c; }
+.atlas-stage { display: grid; grid-template-columns: 1fr 340px; gap: 14px; align-items: start; }
+@media (max-width: 1100px) { .atlas-stage { grid-template-columns: 1fr; } }
+#view svg.atlas-svg { width: 100%; height: calc(100vh - 370px); min-height: 440px; max-height: 900px; display: block;
+  background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: 10px; }
+@media (max-width: 1100px) { #view svg.atlas-svg { height: 60vh; } }
+/* Below ~700px the map would shrink labels to unreadable sizes, so keep it at a
+   legible minimum width and let the stage pan horizontally instead. */
+@media (max-width: 700px) {
+  .atlas-stage { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #view svg.atlas-svg { min-width: 760px; height: 500px; }
+  .atlas-stage::before { content: 'Swipe the map sideways to pan \2192'; display: block;
+    font-size: 11px; color: var(--cp-text-soft); margin: 0 0 6px; }
+}
+.atlas-region { fill: none; stroke: var(--at-region); stroke-dasharray: 4 5; stroke-width: 1; }
+.atlas-regionlabel { font-size: 9px; letter-spacing: .16em; fill: var(--cp-text-soft); }
+.atlas-node { cursor: pointer; }
+.atlas-body { fill: var(--cp-surface-soft); stroke: var(--cp-border); stroke-width: 1.2; }
+.atlas-node:hover .atlas-body, .atlas-node.sel .atlas-body { stroke: var(--cp-accent); stroke-width: 2; }
+.atlas-node.dim { opacity: .3; }
+.atlas-nm { font-size: 13px; font-weight: 700; fill: var(--cp-text); }
+.atlas-tg { font-size: 10px; fill: var(--cp-text-soft); }
+.atlas-meta { font-size: 9.5px; fill: var(--cp-text-soft); }
+.atlas-accent { fill: var(--at-signal); }
+.atlas-region-estate { fill: var(--at-policy); } .atlas-region-core { fill: var(--at-detect); }
+.atlas-region-ops { fill: var(--at-signal); } .atlas-region-agent { fill: var(--at-identity); }
+.atlas-region-substrate { fill: var(--at-unclassified); }
+.atlas-line { fill: none; stroke-linecap: round; }
+.atlas-hit { fill: none; stroke: transparent; stroke-width: 14; cursor: pointer; }
+.atlas-flow:hover .atlas-line, .atlas-flow.on .atlas-line { filter: brightness(1.35); }
+.atlas-t-policy { stroke: var(--at-policy); } .atlas-t-signal { stroke: var(--at-signal); }
+.atlas-t-identity { stroke: var(--at-identity); } .atlas-t-detect { stroke: var(--at-detect); }
+.atlas-t-respond { stroke: var(--at-respond); } .atlas-t-unclassified { stroke: var(--at-unclassified); }
+.atlas-head.atlas-t-policy { fill: var(--at-policy); stroke: none; }
+.atlas-head.atlas-t-signal { fill: var(--at-signal); stroke: none; }
+.atlas-head.atlas-t-identity { fill: var(--at-identity); stroke: none; }
+.atlas-head.atlas-t-detect { fill: var(--at-detect); stroke: none; }
+.atlas-head.atlas-t-respond { fill: var(--at-respond); stroke: none; }
+.atlas-head.atlas-t-unclassified { fill: var(--at-unclassified); stroke: none; }
+.atlas-gapmark circle { fill: var(--cp-surface); stroke: var(--at-policy); stroke-width: 1.4; cursor: pointer; }
+.atlas-gapq { font-size: 11px; font-weight: 700; fill: var(--at-policy); }
+.atlas-port rect { fill: var(--at-port); cursor: pointer; }
+.atlas-port:hover rect { fill: var(--cp-accent); }
+.atlas-panel { border: 1px solid var(--cp-border); border-radius: 10px; padding: 14px;
+  background: var(--cp-surface-soft); font-size: 12.5px; max-height: 820px; overflow: auto; }
+.atlas-panel h4 { margin: 0 0 6px; font-size: 14px; }
+.atlas-h5 { margin: 12px 0 4px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.atlas-dl { display: grid; grid-template-columns: 88px 1fr; gap: 5px 10px; margin: 8px 0; }
+.atlas-dl dt { font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--cp-text-soft); }
+.atlas-dl dd { margin: 0; }
+.atlas-verb { color: var(--cp-accent); font-style: italic; font-weight: 500; }
+.atlas-badge { font-size: 9.5px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--cp-border); }
+.atlas-panel h5 { margin: 12px 0 4px; font-size: 10px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--cp-text-soft); }
+.atlas-list { margin: 0 0 4px; padding-left: 18px; font-size: 12.5px; line-height: 1.5; }
+.atlas-list li { margin: 0 0 4px; }
+.atlas-meta-inline { display: block; font-size: 11.5px; color: var(--cp-text-soft); }
+.atlas-v-verified { color: var(--at-port); border-color: var(--at-port); }
+.atlas-v-derived { color: var(--at-unclassified); border-color: var(--at-unclassified); }
+.atlas-v-gap { color: var(--at-policy); border-color: var(--at-policy); }
+.atlas-gapcard { border-left: 2px solid var(--at-policy); padding-left: 9px; margin: 8px 0; }
+.atlas-picker { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 10px; }
+.atlas-anatomy-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-bottom: 12px; }
+.atlas-col { border: 1px solid var(--cp-border); border-radius: 8px; padding: 10px; background: var(--cp-surface); }
+.atlas-col h4 { margin: 0 0 8px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--cp-text-soft); }
+.atlas-item { display: block; width: 100%; text-align: left; padding: 7px 9px; margin-bottom: 6px;
+  border: 1px solid var(--cp-border); border-radius: 6px; background: var(--cp-surface-soft);
+  cursor: pointer; color: var(--cp-text); text-decoration: none; }
+.atlas-item:hover { border-color: var(--cp-accent); }
+.atlas-item-static, .atlas-item-gap { cursor: default; }
+.atlas-item-nm { display: block; font-weight: 600; font-size: 12px; }
+.atlas-item-vb { display: block; font-size: 11px; font-style: italic; color: var(--cp-accent); }
+.atlas-item-mv { display: block; font-size: 10.5px; color: var(--cp-text-soft); }
+.atlas-t-item-policy { border-left: 3px solid var(--at-policy); }
+.atlas-t-item-signal { border-left: 3px solid var(--at-signal); }
+.atlas-t-item-identity { border-left: 3px solid var(--at-identity); }
+.atlas-t-item-detect { border-left: 3px solid var(--at-detect); }
+.atlas-t-item-respond { border-left: 3px solid var(--at-respond); }
+.atlas-item-port { border-left: 3px solid var(--at-port); }
+.atlas-item-gap { border-left: 3px solid var(--at-policy); }
+.atlas-empty { font-size: 11px; color: var(--cp-text-soft); margin: 0; }
+
+:root {
+  --pl-control: #1f6fd0; --pl-telemetry: #c2700c; --pl-reasoning: #6d4bc4; --pl-unclassified: #8a8a8a;
+}
+html[data-theme="dark"] {
+  --pl-control: #6fb3ff; --pl-telemetry: #f0b34a; --pl-reasoning: #b49bf0; --pl-unclassified: #a0a0a0;
+}
+.conn-details { margin: 6px 0 4px; font-size: 12.5px; color: var(--cp-text-soft); max-width: 92ch; }
+.conn-details > summary { cursor: pointer; color: var(--cp-accent); font-weight: 600; padding: 3px 0; }
+.conn-details p { margin: 6px 0; line-height: 1.55; }
+
+.sys-modebar { display: flex; gap: 6px; margin: 12px 0 10px; flex-wrap: wrap; }
+.sys-modebtn { padding: 7px 14px; font-size: 13px; cursor: pointer; border-radius: 7px;
+  background: var(--cp-surface-soft); color: var(--cp-text); border: 1px solid var(--cp-border); }
+.sys-modebtn:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+.sys-modebtn.on { background: var(--cp-accent); color: var(--cp-bg); border-color: var(--cp-accent); font-weight: 600; }
+
+.sys-controls { display: flex; align-items: center; gap: 7px; flex-wrap: wrap; margin: 0 0 10px;
+  padding: 9px 12px; background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 8px; }
+.sys-ctl-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em;
+  color: var(--cp-text-soft); font-weight: 700; margin-left: 4px; }
+.sys-ctl-label:first-child { margin-left: 0; }
+.sys-select { padding: 5px 8px; font-size: 13px; border-radius: 6px; background: var(--cp-bg);
+  color: var(--cp-text); border: 1px solid var(--cp-border); max-width: 260px; }
+.sys-pill, .sys-planebtn { padding: 5px 11px; font-size: 12.5px; cursor: pointer; border-radius: 999px;
+  background: var(--cp-bg); color: var(--cp-text); border: 1px solid var(--cp-border); }
+.sys-pill:hover, .sys-planebtn:hover { border-color: var(--cp-accent); }
+.sys-pill.on { background: var(--cp-accent); color: var(--cp-bg); border-color: var(--cp-accent); font-weight: 600; }
+.sys-planebtn { opacity: .5; }
+.sys-planebtn.on { opacity: 1; font-weight: 600; color: var(--cp-bg); }
+.plane-btn-control.on { background: var(--pl-control); border-color: var(--pl-control); }
+.plane-btn-telemetry.on { background: var(--pl-telemetry); border-color: var(--pl-telemetry); }
+.plane-btn-reasoning.on { background: var(--pl-reasoning); border-color: var(--pl-reasoning); }
+.plane-btn-unclassified.on { background: var(--pl-unclassified); border-color: var(--pl-unclassified); }
+
+.sys-depthwrap { display: inline-flex; gap: 4px; align-items: center; }
+.sys-step { width: 27px; height: 27px; font-size: 12px; cursor: pointer; border-radius: 50%;
+  background: var(--cp-bg); color: var(--cp-text-soft); border: 1px solid var(--cp-border); }
+.sys-step.filled { color: var(--cp-accent); border-color: var(--cp-accent); }
+.sys-step.on { background: var(--cp-accent); color: var(--cp-bg); border-color: var(--cp-accent); font-weight: 700; }
+.sys-play { padding: 5px 11px; font-size: 12px; cursor: pointer; border-radius: 999px; margin-left: 4px;
+  background: var(--cp-bg); color: var(--cp-text); border: 1px dashed var(--cp-border); }
+.sys-play:hover { border-color: var(--cp-accent); color: var(--cp-accent); }
+
+.sys-planeblurbs { margin: 0 0 10px; }
+.sys-planeblurb { margin: 0 0 5px; font-size: 12.5px; line-height: 1.5; color: var(--cp-text-soft);
+  padding-left: 10px; border-left: 3px solid var(--cp-border); max-width: 96ch; }
+.sys-planeblurb.plane-control { border-left-color: var(--pl-control); }
+.sys-planeblurb.plane-telemetry { border-left-color: var(--pl-telemetry); }
+.sys-planeblurb.plane-reasoning { border-left-color: var(--pl-reasoning); }
+
+.sys-canvas-wrap { display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap; }
+.sys-svg { flex: 1 1 620px; min-width: 320px; background: var(--cp-surface-soft);
+  border: 1px solid var(--cp-border); border-radius: 10px; }
+.sys-panel { flex: 0 1 380px; min-width: 280px; max-height: 620px; overflow-y: auto;
+  background: var(--cp-surface-soft); border: 1px solid var(--cp-border); border-radius: 10px; padding: 12px 14px; }
+.sys-panel h3 { margin: 0 0 4px; font-size: 15px; }
+.sys-panel h4 { margin: 12px 0 4px; font-size: 12px; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--cp-text-soft); }
+.sys-flowlist { list-style: none; padding: 0; margin: 0; font-size: 12.5px; }
+.sys-flowlist li { padding: 3px 0; line-height: 1.5; }
+.sys-verb { color: var(--cp-accent); font-style: italic; }
+
+.sysnode-box { fill: var(--cp-bg); stroke: var(--cp-border); stroke-width: 1.2; }
+.sysnode-focus .sysnode-box { stroke: var(--cp-accent); stroke-width: 2.4; }
+.sysnode:hover .sysnode-box { stroke: var(--cp-accent); }
+.sysnode-emoji { font-size: 18px; }
+.sysnode-label { font-size: 12.5px; font-weight: 600; fill: var(--cp-text); }
+.sysnode-sub { font-size: 10px; fill: var(--cp-text-soft); }
+.sysnode-dim { opacity: .28; }
+.sysdepth-2 { opacity: .84; }
+.sysdepth-3 { opacity: .68; }
+.sys-colhdr { font-size: 10.5px; font-weight: 700; fill: var(--cp-text-soft);
+  text-transform: uppercase; letter-spacing: .05em; }
+.sys-colhdr-sub { font-size: 9.5px; fill: var(--cp-text-soft); opacity: .8; }
+
+.sysedge { stroke-width: 1.9; stroke-opacity: .8; pointer-events: none; }
+.sysedge.hot { stroke-width: 3.4; stroke-opacity: 1; }
+.sysedge-back { stroke-dasharray: 5 4; stroke-opacity: .62; }
+.sysedge-hit { stroke: transparent; stroke-width: 13; pointer-events: stroke; cursor: pointer; }
+.sysedge-mute { stroke-opacity: .09; }
+.sysedge-label { font-size: 9.5px; font-style: italic; pointer-events: none; }
+.sysedge-back-key { border-bottom: 2px dashed var(--cp-text-soft); }
+.plane-stroke-control { stroke: var(--pl-control); }
+.plane-stroke-telemetry { stroke: var(--pl-telemetry); }
+.plane-stroke-reasoning { stroke: var(--pl-reasoning); }
+.plane-stroke-unclassified { stroke: var(--pl-unclassified); }
+.sysarrow-head.plane-stroke-control { fill: var(--pl-control); }
+.sysarrow-head.plane-stroke-telemetry { fill: var(--pl-telemetry); }
+.sysarrow-head.plane-stroke-reasoning { fill: var(--pl-reasoning); }
+.sysarrow-head.plane-stroke-unclassified { fill: var(--pl-unclassified); }
+.plane-fill-control { fill: var(--pl-control); }
+.plane-fill-telemetry { fill: var(--pl-telemetry); }
+.plane-fill-reasoning { fill: var(--pl-reasoning); }
+.plane-fill-unclassified { fill: var(--pl-unclassified); }
+.plane-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 4px; }
+.plane-dot-control { background: var(--pl-control); }
+.plane-dot-telemetry { background: var(--pl-telemetry); }
+.plane-dot-reasoning { background: var(--pl-reasoning); }
+.plane-dot-unclassified { background: var(--pl-unclassified); }
+.conn-flow-item.plane-control { border-left-color: var(--pl-control); }
+.conn-flow-item.plane-telemetry { border-left-color: var(--pl-telemetry); }
+.conn-flow-item.plane-reasoning { border-left-color: var(--pl-reasoning); }
+.sys-legend { font-size: 12.5px; line-height: 1.55; color: var(--cp-text-soft); margin: 10px 0 0; max-width: 100ch; }
+@media (max-width: 900px) { .sys-canvas-wrap { flex-direction: column; } .sys-panel { max-height: none; } }
+
 </style>
 </head>
 <body>
@@ -2416,7 +2632,7 @@ header .header-actions {
   <button data-route="partners">🧩 Build type</button>
   <button data-route="workload">🛡️ Workload</button>
   <button data-route="modality">⚙️ API modality</button>
-  <button data-route="connections">🕸️ Connections</button>
+  <button data-route="atlas">🗺️ Atlas</button>
   <button data-route="index">🔤 A–Z</button>
 </nav>
 <div id="meta-bar" style="padding: 4px 16px; font-size: 11px; color: var(--cp-text-soft); background: var(--cp-surface-soft); border-bottom: 1px solid var(--cp-border); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px;">
@@ -2509,6 +2725,140 @@ header .header-actions {
 
 .markmap-dark .mm-toolbar > *:hover > * {--un-text-opacity:1;color:rgb(228 228 231 / var(--un-text-opacity));
     }
+
+/* ==========================================================================
+   LAYOUT — one shared horizontal rhythm
+   --------------------------------------------------------------------------
+   Every band shipped with its own ad-hoc gutter (header 16px, nav 20px,
+   #meta-bar 20px, #view 0, card grids 20px, tables 24px). At 1920px that put
+   content on three different left edges, ran the Atlas heading and controls
+   flush against the window (left: 0) and pinned the side panel to the right
+   edge (right: 1920). One token now drives all of them, and content is capped
+   so it stops sprawling across an ultrawide display.
+   The gutter absorbs any width beyond --content-max, which centres the content
+   without needing a wrapper element around every renderer's output.
+   ========================================================================== */
+:root {
+  --gutter: 32px;
+  --content-max: 1680px;
+  --edge: max(var(--gutter), calc((100% - var(--content-max)) / 2));
+}
+
+header,
+nav.entry,
+html[data-build="external"] nav.entry,
+html:not([data-build="external"]) nav.entry,
+html[data-build="external"] #meta-bar,
+html:not([data-build="external"]) #meta-bar,
+#view {
+  padding-left: var(--edge) !important;
+  padding-right: var(--edge) !important;
+}
+
+#view { padding-top: 22px !important; padding-bottom: 64px !important; }
+/* A markmap is a full-bleed canvas; guttering it would waste the drawing area. */
+#view.has-mindmap { padding: 0 !important; }
+
+/* These carried their own gutters and would now double up. */
+.card-grid { padding-left: 0; padding-right: 0; }
+#view > .api-table { margin-left: 0; margin-right: 0; width: 100%; }
+
+/* Keep the footer on the same right edge as the content it annotates. */
+footer { right: max(var(--gutter), calc((100vw - var(--content-max)) / 2)) !important; }
+
+/* ---- Extensibility X-ray ---- */
+.atlas-svg-xray .atlas-flow { opacity: .17; }
+.atlas-svg-xray .atlas-flow:hover, .atlas-svg-xray .atlas-flow.on { opacity: .5; }
+.atlas-xbar { cursor: pointer; }
+.atlas-xbar-bg { fill: var(--cp-border); opacity: .5; }
+.atlas-xbar:hover .atlas-xbar-bg { opacity: .9; }
+.atlas-xbar:focus-visible { outline: 2px solid var(--cp-accent); outline-offset: 2px; }
+.atlas-xseg { transition: opacity .12s; }
+/* One colour per operation, reused by the bars, the legend and the badges so a
+   reader learns the mapping once. */
+.atlas-xop-read   { fill: #2563eb; color: #2563eb; }
+.atlas-xop-ingest { fill: #0d9488; color: #0d9488; }
+.atlas-xop-act    { fill: #d83b01; color: #d83b01; }
+.atlas-xop-route  { fill: #7c3aed; color: #7c3aed; }
+.atlas-xlegend { display: flex; flex-wrap: wrap; gap: 10px; margin: 8px 0 6px; }
+.atlas-xkey { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--cp-text-muted); }
+.atlas-xkey i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; background: currentColor; }
+.atlas-xnote { font-size: 11.5px; color: var(--cp-text-soft); margin: 6px 0 10px; }
+.atlas-xlist { list-style: none; margin: 0; padding: 0; }
+.atlas-xlist li { margin: 0 0 4px; }
+.atlas-xrow { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; width: 100%;
+  text-align: left; background: var(--cp-surface); border: 1px solid var(--cp-border);
+  border-radius: 8px; padding: 7px 9px; cursor: pointer; font: inherit; color: inherit; }
+.atlas-xrow:hover { border-color: var(--cp-accent); }
+.atlas-xrow-nm { font-size: 12.5px; font-weight: 600; }
+.atlas-xrow-n { font-size: 12.5px; color: var(--cp-text-muted); }
+.atlas-xrow-ops { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px; font-size: 11px; }
+.atlas-xrow-ops em { font-style: normal; font-weight: 600; }
+.atlas-xmod { margin: 12px 0 4px; font-size: 11px; text-transform: uppercase;
+  letter-spacing: .06em; color: var(--cp-text-muted); }
+.atlas-xmod .t-mono { color: var(--cp-text-soft); }
+.atlas-xsurf li { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.atlas-opbadge { font-style: normal; font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; border: 1px solid currentColor; border-radius: 3px; padding: 0 3px; opacity: .85; }
+.atlas-xgaps li { margin-bottom: 6px; }
+.atlas-xgaps span { display: block; font-size: 11.5px; color: var(--cp-text-soft); }
+/* The full inventory is long, so it opens on demand rather than burying the
+   anatomy columns it sits under. */
+.atlas-inv { margin-top: 14px; border: 1px solid var(--cp-border); border-radius: 10px;
+  padding: 10px 12px; background: var(--cp-surface); }
+.atlas-inv > summary { cursor: pointer; font-weight: 600; font-size: 13px; }
+.atlas-inv[open] > summary { margin-bottom: 6px; }
+.atlas-inv .atlas-xsurf { columns: 2; column-gap: 26px; }
+@media (max-width: 900px) { .atlas-inv .atlas-xsurf { columns: 1; } }
+
+/* Anatomy adds a picker row above the body, so the two-column stage needs
+   explicit placement or auto-flow drops the body into the narrow panel column. */
+.atlas-stage-anatomy > .atlas-picker { grid-column: 1 / -1; grid-row: 1; }
+.atlas-stage-anatomy > .atlas-anatomy { grid-column: 1; grid-row: 2; min-width: 0; }
+.atlas-stage-anatomy > .atlas-panel { grid-column: 2; grid-row: 2; align-self: start; }
+@media (max-width: 1100px) {
+  .atlas-stage-anatomy > .atlas-picker,
+  .atlas-stage-anatomy > .atlas-anatomy,
+  .atlas-stage-anatomy > .atlas-panel { grid-column: 1; grid-row: auto; }
+}
+
+/* Readable measure — prose much past ~75ch is measurably harder to scan. */
+.conn-sub, .conn-caveat, .conn-details p { max-width: 74ch; }
+
+/* Each filter label travels with the control it labels (see groupFilterFields). */
+.filters { flex-wrap: wrap; row-gap: 8px; }
+.f-field { display: inline-flex; align-items: center; gap: 6px; }
+.f-field > label { white-space: nowrap; }
+
+/* The status strip is fixed over the canvas; never let it swallow a map click. */
+footer { pointer-events: none; max-width: min(100%, var(--content-max)); }
+
+@media (max-width: 900px) {
+  :root { --gutter: 16px; }
+  #view { padding-top: 14px !important; padding-bottom: 48px !important; }
+}
+
+/* Phone: stack each field so the control gets the full column, and let the
+   title wrap instead of running off the edge. */
+@media (max-width: 700px) {
+  header { gap: 8px; }
+  /* h1 carries an inline display:inline-flex, so it shrank into a narrow column
+     beside the logo and broke the title mid-word. Give it the full row and only
+     allow breaks between words. */
+  header h1 { display: flex !important; flex-wrap: wrap; width: 100%;
+    font-size: 17px; line-height: 1.3; overflow-wrap: normal; word-break: normal; }
+  .filters { gap: 10px; width: 100%; }
+  /* Label (plus any help toggle) on the first row, control spanning below it. */
+  .f-field { display: grid; grid-template-columns: 1fr auto;
+    align-items: center; gap: 3px 6px;
+    flex: 1 1 calc(50% - 10px); min-width: 132px; }
+  .f-field > label { grid-column: 1; }
+  .f-field > button { grid-column: 2; grid-row: 1; justify-self: end; }
+  .f-field > select, .f-field > input { grid-column: 1 / -1; width: 100%; min-width: 0; }
+  /* The action buttons are a nowrap row by default and ran ~190px off a phone. */
+  .header-actions { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .header-actions > button { flex: 0 1 auto; }
+}
 
 </style>
 <!-- d3@7.9.0 (externalized to cdn.jsdelivr.net to avoid OneDrive malware-scanner false-positive on inlined minified JS). Needs internet on first load; cached after. -->
@@ -6957,416 +7307,862 @@ function flowsForPair(a, b) {
   return PRODUCT_FLOWS.filter(f => (f.from === a && f.to === b) || (f.from === b && f.to === a));
 }
 
-function connectionGraph() {
-  const famIds = FAMILIES.map(f => f.id);
-  const nodes = FAMILIES.map(f => ({
-    id: f.id, label: f.label, emoji: f.emoji, kind: f.kind, tagline: f.tagline,
-    n: Object.keys(S).filter(id => familiesOfSurface(id).has(f.id)).length
-  }));
-  const edgeMap = new Map();
-  for (const sc of SCENARIOS) {
-    const fs = new Set();
-    for (const sid of (sc.surfaces || [])) for (const f of familiesOfSurface(sid)) fs.add(f);
-    const a = [...fs].filter(x => famIds.includes(x)).sort();
-    if (a.length < 2) continue;
-    for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) {
-      const k = a[i] + '|' + a[j];
-      if (!edgeMap.has(k)) edgeMap.set(k, { a: a[i], b: a[j], scenarios: [] });
-      edgeMap.get(k).scenarios.push(sc);
-    }
-  }
-  // Surfaces that themselves belong to both products -- the hard structural seams,
-  // distinct from "these two products show up in the same scenario".
-  const shared = new Map();
-  for (const id of Object.keys(S)) {
-    const a = [...familiesOfSurface(id)].filter(x => famIds.includes(x)).sort();
-    if (a.length < 2) continue;
-    for (let i = 0; i < a.length; i++) for (let j = i + 1; j < a.length; j++) {
-      const k = a[i] + '|' + a[j];
-      if (!shared.has(k)) shared.set(k, []);
-      shared.get(k).push(id);
-    }
-  }
-  const edges = [...edgeMap.values()].map(e => ({
-    ...e, w: e.scenarios.length, sharedSurfaces: shared.get(e.a + '|' + e.b) || []
-  }));
-  // Seams that exist only as a shared surface, with no scenario spanning both.
-  for (const [k, ids] of shared) {
-    if (edgeMap.has(k)) continue;
-    const [a, b] = k.split('|');
-    edges.push({ a, b, scenarios: [], w: 0, sharedSurfaces: ids });
-  }
-  return { nodes, edges: edges.sort((x, y) => y.w - x.w) };
+// Which system a flow belongs to. This is a classification of verbs that were
+// already authored and cited — it adds no new claim about the products. Any
+// verb missing here renders as "unclassified" rather than being silently
+// bucketed, so adding a flow without classifying it is visible, not invisible.
+const VERB_KIND = {
+  'defines labels that': 'control',
+  'sets retention enforced by': 'control',
+  'supplies classification to': 'control',
+  'extends labelling into': 'control',
+  'issues agent identity to': 'control',
+  'gates enrolment and access for': 'control',
+  'governs data handled by': 'control',
+  'reports activity back to': 'telemetry',
+  'exposes agent posture to': 'telemetry',
+  'feeds device compliance to': 'telemetry',
+  'sends device risk to': 'telemetry',
+  'streams incidents into': 'telemetry',
+  'sends audit and activity to': 'telemetry',
+  'sends identity risk to': 'telemetry',
+  'supplies incident context to': 'reasoning'
+};
+const PLANES = [
+  { id: 'control', label: 'Control', emoji: '\u{1F3AF}',
+    blurb: 'Policy that one product issues and another must honour. Runs outward from Purview and Entra. Clean one-way flow \u2014 no loops.' },
+  { id: 'telemetry', label: 'Telemetry', emoji: '\u{1F4E1}',
+    blurb: 'Observed state reported back. Largely the return path, running opposite to the control arrows \u2014 and it contains the one genuine loop in the portfolio.' },
+  { id: 'reasoning', label: 'Reasoning', emoji: '\u{1F9E0}',
+    blurb: 'Context handed to the analyst-facing layer. Terminal \u2014 Security Copilot consumes and issues nothing back.' },
+  { id: 'unclassified', label: 'Unclassified', emoji: '\u2753',
+    blurb: 'Flows whose verb has not been assigned to a system yet.' }
+];
+function flowKind(f) { return VERB_KIND[f.verb] || 'unclassified'; }
+function connEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+// ============================================================================
+// ATLAS — the systems view.
+//
+// Everything below is either LAYOUT (pure presentation) or ANNOTATION on flows
+// that were already authored and cited above. No product claim is invented
+// here, and nothing restates data that already exists: family names, taglines,
+// workloads, surface names, surface prose, scenario membership and the
+// not-extensible records are all read live from the catalog consts, so the
+// Atlas cannot drift away from the catalog the way a hand-copied diagram would.
+// ============================================================================
+
+// Presentation only. Regions read left -> right: the estate that is protected,
+// the core that detects and classifies, the operations layer that acts.
+const ATLAS_REGIONS = [
+  { id: 'estate',    label: 'Protected estate \u00b7 identity \u00b7 devices \u00b7 content', x: 40,  y: 108, w: 300, h: 620 },
+  { id: 'core',      label: 'Detection & data-security core',                              x: 396, y: 150, w: 320, h: 470 },
+  { id: 'ops',       label: 'Security operations',                                         x: 780, y: 150, w: 300, h: 470 },
+  { id: 'agent',     label: 'Agent control plane',                                         x: 396, y: 668, w: 320, h: 130 },
+  { id: 'substrate', label: 'Platform substrate \u00b7 go-to-market',                       x: 780, y: 668, w: 300, h: 130 }
+];
+const ATLAS_LAYOUT = {
+  sharepoint: { x: 74,  y: 168, w: 232, h: 82, region: 'estate' },
+  intune:     { x: 74,  y: 348, w: 232, h: 82, region: 'estate' },
+  entra:      { x: 74,  y: 528, w: 232, h: 82, region: 'estate' },
+  defender:   { x: 428, y: 208, w: 256, h: 88, region: 'core' },
+  purview:    { x: 428, y: 452, w: 256, h: 88, region: 'core' },
+  sentinel:   { x: 812, y: 208, w: 236, h: 88, region: 'ops' },
+  seccopilot: { x: 812, y: 452, w: 236, h: 88, region: 'ops' },
+  agent365:   { x: 428, y: 700, w: 256, h: 80, region: 'agent' },
+  platform:   { x: 812, y: 700, w: 236, h: 80, region: 'substrate' }
+};
+const ATLAS_W = 1120, ATLAS_H = 820;
+// Content occupies x 40..1080, y 108..798. Cropping the unused margin lets the
+// map render noticeably larger inside the same fixed-height stage.
+const ATLAS_VIEWBOX = '26 94 1068 716';
+
+// Visual grammar. Each line type answers a different question, so a reader can
+// tell "policy being issued" from "telemetry coming back" without a legend.
+const ATLAS_TYPES = {
+  policy:   { label: 'Policy & configuration',  dash: '7 5',   width: 1.9, note: 'Policy issued by the control source.' },
+  signal:   { label: 'Sensors & telemetry',     dash: '',      width: 1.7, note: 'Observed state moving toward the SOC.' },
+  identity: { label: 'Identity & context',      dash: '',      width: 1.6, note: 'Identity or entity context enrichment.', double: true },
+  detect:   { label: 'Detection & incidents',   dash: '',      width: 2.2, note: 'A detection travelling as an incident.' },
+  respond:  { label: 'Response & enforcement',  dash: '',      width: 3.2, note: 'The destination is being acted on.' }
+};
+
+// Annotation on the curated flows above, keyed by from>to>verb so the existing
+// prose is never duplicated. A flow with no entry renders as unclassified
+// rather than being quietly styled as something it is not.
+const FLOW_META = {
+  'purview>sharepoint>defines labels that':        { type: 'policy',   moves: 'Sensitivity-label taxonomy + label policy', mech: 'Taxonomy read from Purview; applied through M365 content surfaces', cadence: 'On policy change / on content event', native: 'Native' },
+  'purview>sharepoint>sets retention enforced by': { type: 'policy',   moves: 'Retention & lifecycle policy',              mech: 'Purview policy engine \u2192 M365 storage tiers',                     cadence: 'Policy evaluation cycle',            native: 'Native' },
+  'purview>defender>supplies classification to':   { type: 'policy',   moves: 'Classification + DLP policy',               mech: 'Defender for Cloud Apps applies Purview policy at network/app layer', cadence: 'Near real time at session',          native: 'Native' },
+  'purview>platform>extends labelling into':       { type: 'policy',   moves: 'Label taxonomy',                            mech: 'Fabric / Power BI items and Power Platform environments inherit it', cadence: 'On policy change',                   native: 'Native' },
+  'sharepoint>purview>reports activity back to':   { type: 'signal',   moves: 'Content & access activity, audit records',  mech: 'Purview audit + Data Access Governance',                            cadence: 'Continuous',                         native: 'Native' },
+  'entra>agent365>issues agent identity to':       { type: 'identity', moves: 'Entra Agent ID + Conditional Access on it', mech: 'Registration through Agent 365 causes Entra to mint the Agent ID',  cadence: 'At registration; CA continuously',   native: 'Native (Preview)' },
+  'agent365>defender>exposes agent posture to':    { type: 'signal',   moves: 'Agent inventory, posture, runtime actions', mech: 'Defender inventory + detection + real-time blocking',               cadence: 'Continuous (Preview)',               native: 'Native (Preview)' },
+  'intune>entra>feeds device compliance to':       { type: 'signal',   moves: 'Device compliance verdict',                 mech: 'Compliance state consumed by Conditional Access as a signal',       cadence: 'On compliance evaluation',           native: 'Native + partner-configurable' },
+  'entra>intune>gates enrolment and access for':   { type: 'policy',   moves: 'Conditional Access decisions',              mech: 'CA governs which identities enrol and which devices reach resources', cadence: 'Per access request',                native: 'Native' },
+  'defender>intune>sends device risk to':          { type: 'signal',   moves: 'Machine risk score',                        mech: 'MDE risk consumed by Intune compliance policy, then onward to CA',  cadence: 'On risk change',                     native: 'Native (connector)' },
+  'defender>sentinel>streams incidents into':      { type: 'detect',   moves: 'Incidents, alerts, raw hunting events',     mech: 'XDR connector + Streaming API \u2192 Event Hubs / Log Analytics',    cadence: 'Near real time',                     native: 'Native + configurable streams' },
+  'purview>sentinel>sends audit and activity to':  { type: 'signal',   moves: 'Audit records, content-activity events',    mech: 'Audit Graph API / activity feeds \u2192 Sentinel data connectors',   cadence: 'Continuous',                         native: 'Customer-configured connector' },
+  'entra>sentinel>sends identity risk to':         { type: 'signal',   moves: 'Sign-in logs, audit, identity-protection risk', mech: 'Entra diagnostic settings \u2192 Sentinel connectors (ARM)',     cadence: 'Continuous',                         native: 'Customer-configured connector' },
+  'sentinel>seccopilot>supplies incident context to': { type: 'identity', moves: 'Incident + entity context',              mech: 'Copilot reasons over Sentinel incidents and data',                  cadence: 'On analyst prompt / agent run',      native: 'Native' },
+  'defender>seccopilot>supplies incident context to': { type: 'identity', moves: 'XDR incident + evidence context',        mech: 'Copilot embedded in the Defender experience',                       cadence: 'On analyst prompt',                  native: 'Native' },
+  'entra>defender>sends identity risk to':         { type: 'signal',   moves: 'Identity-protection risk events',           mech: 'Risk correlated as a first-class XDR signal',                       cadence: 'Continuous',                         native: 'Native' },
+  'purview>agent365>governs data handled by':      { type: 'policy',   moves: 'DSPM, DLP, audit policy inherited by agents', mech: 'Agent 365 blueprint auto-applies existing tenant Purview policy', cadence: 'Automatic on blueprint adoption',    native: 'Native (Preview)' }
+};
+
+// The curated table models who issues policy, but never who acts back on whom.
+// These three response paths are therefore marked DERIVED: they are supported
+// by response scenarios and action surfaces already in the catalog, but they
+// are not asserted as documented directed flows. They render dotted and are
+// filtered separately so a reader can always drop them.
+const ATLAS_DERIVED_FLOWS = [
+  { from: 'defender', to: 'intune', verb: 'isolates / remediates devices via', type: 'respond', back: true,
+    moves: 'Device isolation, AV scan, remediation actions', mech: 'MDE machine actions + endpoint security policy', cadence: 'On response decision', native: 'Native',
+    what: 'Response actions on the device \u2014 isolate, run an AV scan, restrict app execution \u2014 are triggered from Defender and land on the managed endpoint. Derived from the catalog\u2019s response scenarios and the MDE action surfaces, not from the curated control table.',
+    evidence: ['mde-api', 'mde-security-settings'] },
+  { from: 'sentinel', to: 'defender', verb: 'runs playbooks against', type: 'respond', back: true,
+    moves: 'Automated response via playbooks; incident updates', mech: 'Sentinel automation rules / Logic Apps + Incidents API', cadence: 'On trigger', native: 'Native + configurable',
+    what: 'Sentinel automation runs playbooks against incidents, updating and closing them and driving response actions back into the detection plane. Derived from the Sentinel incidents and REST surfaces.',
+    evidence: ['sentinel-incidents', 'sentinel-rest'] },
+  { from: 'entra', to: 'sharepoint', verb: 'revokes access / enforces CA on', type: 'respond', back: true,
+    moves: 'Session revocation, access block', mech: 'Conditional Access + continuous access evaluation', cadence: 'Near real time', native: 'Native',
+    what: 'When risk rises, Entra enforces the decision at the resource: blocking or revoking access to content and apps. Derived from the Conditional Access and CAE surfaces.',
+    evidence: ['ca-policy-crud', 'ca-cae-sdk'] }
+];
+
+// Featured extensibility ports per family. Surface IDs only — every label and
+// description is read from S at render time, so a port can never describe a
+// surface differently from the rest of the catalog. IDs that do not exist in S
+// are dropped loudly by atlasSelfCheck() rather than rendering as blanks.
+const ATLAS_PORTS = {
+  defender:   ['xdr-incidents', 'xdr-alerts-v2', 'xdr-stream', 'xdr-custom-detections', 'mde-api', 'mde-streaming-api'],
+  sentinel:   ['sentinel-rest', 'sentinel-graph', 'sentinel-incidents', 'sentinel-data-connectors-arm'],
+  purview:    ['graph-process', 'graph-content-label', 'audit-graph', 'ps-dlp-policy', 'mip-file'],
+  entra:      ['ca-policy-crud', 'identity-prot', 'ca-workload-id', 'ca-cae-sdk'],
+  intune:     ['intune-graph-core', 'intune-compliance-partner', 'intune-mtd', 'intune-mde-connector'],
+  seccopilot: ['seccopilot-custom-plugins', 'seccopilot-embedded-experiences'],
+  agent365:   ['a365-sdk', 'a365-register', 'a365-otel'],
+  sharepoint: ['spo-dag', 'spo-mgmt-shell', 'spo-pnp-ps'],
+  platform:   ['graph-base', 'graph-sdks', 'misa-route', 'security-store-route']
+};
+
+// The not-extensible records already live in NOT_EXTENSIBLE. This only says
+// which family each one belongs to, so gaps can be drawn on the right product.
+const GAP_FAMILY = {
+  'a365-isv-self-service': 'agent365', 'a365-isv-telemetry': 'agent365',
+  'a365-realtime-coverage': 'agent365', 'a365-preview-and-licensing': 'agent365',
+  'compliance-manager-api': 'purview', 'graph-dlp-policy': 'purview',
+  'insider-risk-policy-api': 'purview', 'content-explorer-api': 'purview',
+  'dspm-ai-posture-api': 'purview'
+};
+
+// --- derived accessors ------------------------------------------------------
+function atlasFlowKey(f) { return f.from + '>' + f.to + '>' + f.verb; }
+function atlasFlows() {
+  const curated = PRODUCT_FLOWS.map(f => {
+    const m = FLOW_META[atlasFlowKey(f)] || {};
+    return Object.assign({}, f, m, { verif: 'verified', type: m.type || 'unclassified' });
+  });
+  return curated.concat(ATLAS_DERIVED_FLOWS.map(f => Object.assign({}, f, { verif: 'derived' })));
+}
+function atlasPortsFor(fam) { return (ATLAS_PORTS[fam] || []).filter(id => S[id]); }
+function atlasGapsFor(fam) { return NOT_EXTENSIBLE.filter(g => GAP_FAMILY[g.id] === fam); }
+function atlasWorkloadsFor(fam) { return WORKLOADS.filter(w => w.family === fam); }
+function atlasSurfaceCount(fam) { return Object.keys(S).filter(id => familiesOfSurface(id).has(fam)).length; }
+
+// --- extensibility inventory (the X-ray) ------------------------------------
+// The eco plate shows a curated shortlist of featured ports (ATLAS_PORTS, 35 of
+// 354). The X-ray answers the different question a partner actually arrives
+// with: everything I can build against on this product, and how do I call it.
+// All of it is derived — S, MOD, OPS and WORKLOADS — so it cannot drift.
+const ATLAS_OPS_ORDER = ['read', 'ingest', 'act', 'route'];
+function atlasSurfacesFor(fam) {
+  return Object.keys(S).filter(id => familiesOfSurface(id).has(fam))
+    .sort((a, b) => S[a].name.localeCompare(S[b].name));
+}
+function atlasOpsOf(sid) { return (typeof OPS !== 'undefined' && OPS[sid]) || []; }
+function atlasModOf(sid) { return (typeof MOD !== 'undefined' && MOD[sid] && MOD[sid].m) || 'other'; }
+function atlasOpCountsFor(fam) {
+  const c = { read: 0, ingest: 0, act: 0, route: 0, unclassified: 0 };
+  atlasSurfacesFor(fam).forEach(sid => {
+    const ops = atlasOpsOf(sid);
+    if (!ops.length) c.unclassified++;
+    else ops.forEach(o => { if (o in c) c[o]++; });
+  });
+  return c;
+}
+// A surface with two operations counts once per operation, so the strip is
+// weighted by capability rather than by row count. Stated in the panel.
+function atlasOpTotal(fam) {
+  const c = atlasOpCountsFor(fam);
+  return ATLAS_OPS_ORDER.reduce((n, k) => n + c[k], 0) + c.unclassified;
+}
+function atlasModCountsFor(fam) {
+  const c = {};
+  atlasSurfacesFor(fam).forEach(sid => { const m = atlasModOf(sid); c[m] = (c[m] || 0) + 1; });
+  return c;
+}
+// Group a family's surfaces under the workloads that own them, so the inventory
+// reads as capability areas rather than one flat 78-row list. Surfaces the
+// family owns but no workload lists fall into a final bucket rather than
+// vanishing — silently dropping them would understate the catalog.
+function atlasSurfacesByWorkload(fam) {
+  const all = new Set(atlasSurfacesFor(fam));
+  const groups = [];
+  atlasWorkloadsFor(fam).forEach(w => {
+    const ids = (w.surfaces || []).filter(sid => all.has(sid));
+    if (ids.length) groups.push({ label: w.label, surfaces: ids });
+    ids.forEach(sid => all.delete(sid));
+  });
+  if (all.size) groups.push({ label: 'Other surfaces in this family', surfaces: [...all].sort((a, b) => S[a].name.localeCompare(S[b].name)) });
+  return groups;
 }
 
-function renderConnections() {
+// Families a scenario actually touches, derived from its surfaces. This is what
+// makes every one of the catalog's scenarios traceable on the map rather than
+// the handful a hand-authored trace list could carry.
+function atlasFamiliesOfScenario(sc) {
+  const fams = new Set();
+  (sc.surfaces || []).forEach(sid => familiesOfSurface(sid).forEach(f => fams.add(f)));
+  return fams;
+}
+function atlasScenariosSpanning() {
+  return SCENARIOS.filter(sc => atlasFamiliesOfScenario(sc).size > 1);
+}
+
+// Fails loudly in the console if the Atlas ever references something the
+// catalog no longer has. Cheap insurance against the exact drift this view
+// was built to avoid.
+function atlasSelfCheck() {
+  const problems = [];
+  FAMILIES.forEach(f => { if (!ATLAS_LAYOUT[f.id]) problems.push('no ATLAS_LAYOUT for family ' + f.id); });
+  Object.keys(ATLAS_LAYOUT).forEach(id => { if (!FAMILY_BY_ID[id]) problems.push('ATLAS_LAYOUT has unknown family ' + id); });
+  Object.keys(ATLAS_PORTS).forEach(fam => ATLAS_PORTS[fam].forEach(sid => { if (!S[sid]) problems.push('ATLAS_PORTS ' + fam + ' -> unknown surface ' + sid); }));
+  Object.keys(GAP_FAMILY).forEach(id => { if (!NOT_EXTENSIBLE.some(g => g.id === id)) problems.push('GAP_FAMILY has unknown gap ' + id); });
+  // The X-ray and the anatomy inventory are fully derived, so the thing that can
+  // break them is the derivation going empty, not an ID going stale.
+  FAMILIES.forEach(f => {
+    if (!atlasSurfacesFor(f.id).length) problems.push('x-ray: no surfaces resolve for family ' + f.id);
+    const byW = atlasSurfacesByWorkload(f.id).reduce((n, g) => n + g.surfaces.length, 0);
+    if (byW !== atlasSurfaceCount(f.id)) problems.push('x-ray: workload grouping loses surfaces for ' + f.id + ' (' + byW + ' of ' + atlasSurfaceCount(f.id) + ')');
+  });
+  if (typeof OPS === 'undefined') problems.push('x-ray: OPS table missing - operation bars cannot render');
+  if (typeof MOD === 'undefined') problems.push('x-ray: MOD table missing - modality grouping cannot render');
+  NOT_EXTENSIBLE.forEach(g => { if (!GAP_FAMILY[g.id]) problems.push('gap not assigned to a family: ' + g.id); });
+  atlasFlows().forEach(f => {
+    if (f.type === 'unclassified') problems.push('flow has no FLOW_META: ' + atlasFlowKey(f));
+    (f.evidence || []).forEach(sid => { if (!S[sid]) problems.push('flow evidence -> unknown surface ' + sid); });
+  });
+  if (problems.length) console.warn('[atlas] self-check found ' + problems.length + ' issue(s):\n' + problems.join('\n'));
+  return problems;
+}
+
+// --- shared SVG helpers -----------------------------------------------------
+const SVGNS = 'http://www.w3.org/2000/svg';
+function svgEl(tag, attrs) {
+  const n = document.createElementNS(SVGNS, tag);
+  for (const k in (attrs || {})) n.setAttribute(k, attrs[k]);
+  return n;
+}
+const BOX_W = 158, BOX_H = 52;
+function edgePath(sx, sy, ex, ey, back, off) {
+  off = off || 0;
+  if (!back) {
+    const mx = (sx + ex) / 2;
+    return `M ${sx} ${sy} C ${mx} ${sy + off} ${mx} ${ey + off} ${ex} ${ey}`;
+  }
+  const dip = 46 + Math.abs(sy - ey) * 0.2 + Math.abs(off);
+  const my = Math.max(sy, ey) + dip;
+  return `M ${sx} ${sy} C ${sx + 40} ${my} ${ex - 40} ${my} ${ex} ${ey}`;
+}
+// Two products can be joined by more than one flow (Purview both labels and
+// retains SharePoint content). Without a per-pair offset the curves and their
+// labels land on identical coordinates and the text becomes unreadable.
+function pairOffsets(flows, keyFn) {
+  const total = {}, seen = {}, out = new Map();
+  flows.forEach(f => { const k = keyFn(f); total[k] = (total[k] || 0) + 1; });
+  flows.forEach(f => {
+    const k = keyFn(f);
+    const i = (seen[k] = (seen[k] || 0) + 1) - 1;
+    out.set(f, (i - (total[k] - 1) / 2) * 34);
+  });
+  return out;
+}
+function atlasArrowDefs() {
+  const defs = svgEl('defs');
+  defs.innerHTML = Object.keys(ATLAS_TYPES).map(t =>
+    `<marker id="atlasarrow-${t}" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+       orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class="atlas-head atlas-t-${t}"/></marker>`).join('') +
+    `<marker id="atlasarrow-unclassified" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6"
+       orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" class="atlas-head atlas-t-unclassified"/></marker>`;
+  return defs;
+}
+
+// --- ATLAS state ------------------------------------------------------------
+let atlasPlate = 'eco';          // eco | anatomy | trace
+let atlasSel = null;             // selected family id
+let atlasFlowSel = null;         // selected flow key
+let atlasScenario = '';          // scenario id for trace plate
+const atlasLayers = { policy: true, signal: true, identity: true, detect: true, respond: true, ports: false };
+const atlasVerif = { verified: true, derived: true };
+
+function atlasAnchor(fam, side) {
+  const L = ATLAS_LAYOUT[fam];
+  const cx = L.x + L.w / 2, cy = L.y + L.h / 2;
+  if (side === 'l') return [L.x, cy];
+  if (side === 'r') return [L.x + L.w, cy];
+  if (side === 't') return [cx, L.y];
+  if (side === 'b') return [cx, L.y + L.h];
+  return [cx, cy];
+}
+// Leave each box from whichever edge actually faces the destination, so lines
+// never cut back across the node they just left.
+function atlasSides(a, b) {
+  const A = ATLAS_LAYOUT[a], B = ATLAS_LAYOUT[b];
+  const dx = (B.x + B.w / 2) - (A.x + A.w / 2), dy = (B.y + B.h / 2) - (A.y + A.h / 2);
+  if (Math.abs(dx) >= Math.abs(dy)) return dx > 0 ? ['r', 'l'] : ['l', 'r'];
+  return dy > 0 ? ['b', 't'] : ['t', 'b'];
+}
+function atlasScenarioFams() {
+  if (!atlasScenario) return null;
+  const sc = SCENARIOS.find(s => s.id === atlasScenario);
+  return sc ? atlasFamiliesOfScenario(sc) : null;
+}
+function atlasFlowVisible(f) {
+  if (!atlasVerif[f.verif]) return false;
+  if (f.type !== 'unclassified' && !atlasLayers[f.type]) return false;
+  if (atlasSel && f.from !== atlasSel && f.to !== atlasSel) return false;
+  if (atlasScenario) {
+    const sc = SCENARIOS.find(s => s.id === atlasScenario);
+    if (sc) { const fams = atlasFamiliesOfScenario(sc); if (!fams.has(f.from) || !fams.has(f.to)) return false; }
+  }
+  return true;
+}
+
+function renderAtlas() {
   const v = view(); v.innerHTML = ''; clearMarkmap(v);
-  const g = connectionGraph();
-  const W = 960, H = 560;
-  const totalCross = new Set();
-  g.edges.forEach(e => e.scenarios.forEach(s => totalCross.add(s.id)));
+  atlasSelfCheck();
+  const flows = atlasFlows();
+  const spanning = atlasScenariosSpanning();
 
   v.appendChild(el('div', { class: 'conn-intro', html:
-    `<h2 style="margin:0 0 6px;">\u{1F578}\uFE0F How the products actually connect</h2>
-     <p class="conn-sub">Partners rarely build against one product. This maps where the portfolio
-     genuinely overlaps: <strong>${totalCross.size} of ${SCENARIOS.length} scenarios</strong> span more than one product,
-     across <strong>${g.edges.filter(e => e.w > 0).length} product pairs</strong>.
-     Thicker line = more shared scenarios. Bigger circle = more surfaces.
-     <strong>Drag</strong> a product to rearrange, <strong>click</strong> a line to see exactly which scenarios connect the two,
-     <strong>click</strong> a product to filter the whole catalog to it.</p>
-     <p class="conn-caveat">\u26A0\uFE0F The lines above are <strong>undirected</strong>, and that is deliberate: the catalog records that
-     Purview and SharePoint appear together in the same scenarios \u2014 it does <em>not</em> record that Purview
-     <em>defines</em> a label while SharePoint <em>enforces</em> it. Direction cannot be inferred from co-occurrence,
-     so the computed layer never guesses at it. If you want that reading, turn on
-     <strong>Show control direction</strong> below \u2014 a separate, hand-authored layer that is labelled
-     <em>curated</em> everywhere it appears and cites its evidence.</p>` }));
+    `<h2 style="margin:0 0 6px;">\u{1F5FA}\uFE0F Security Atlas \u2014 the system, as it functions</h2>
+     <p class="conn-sub">Signal moves left \u2192 right toward the SOC; policy runs outward from Purview and Entra;
+     enforcement returns to the estate. <strong>${FAMILIES.length} products</strong>,
+     <strong>${flows.filter(f => f.verif === 'verified').length} verified</strong> and
+     <strong>${flows.filter(f => f.verif === 'derived').length} derived</strong> directed flows,
+     <strong>${NOT_EXTENSIBLE.length}</strong> documented gaps.
+     ${spanning.length} of ${SCENARIOS.length} scenarios span more than one product.</p>
+     <details class="conn-details"><summary>How to read this, and what is curated</summary>
+       <p>Every line answers three questions: <em>what moves</em>, <em>which way</em>, and <em>what causes it</em>.
+       The arrows are <strong>hand-authored editorial</strong> \u2014 the catalog data records that two products appear in
+       the same scenario, never who is in charge, and direction cannot be inferred from co-occurrence.
+       Each arrow cites surfaces in this catalog as evidence; click one to open its spec.</p>
+       <p><strong>Verified vs derived.</strong> Solid-cased flows come from the curated control table. The three
+       <em>derived</em> response paths are dotted: they are supported by response scenarios and action surfaces in this
+       catalog, but the curated table does not model response direction, so they are never asserted as documented.
+       Drop them with the verification filter.</p>
+       <p><strong>Gaps are markers, not lines.</strong> A <code>?</code> means partners ask for that surface and it is
+       not publicly extensible. Drawing it as a line would imply a path that does not exist.</p>
+       <p><strong>Entra is deliberately not drawn to everything.</strong> Every Microsoft Security API call is gated by an
+       Entra token. Because that is universally true it says nothing useful as an arrow, so it is stated once here.
+       The Entra arrows that <em>are</em> drawn carry a specific claim beyond authentication.</p>
+     </details>` }));
 
-  let showDir = false;
-  const dirBar = el('div', { class: 'conn-dirbar' });
-  const dirBtn = el('button', { class: 'conn-dir-btn', onclick: () => {
-    showDir = !showDir;
-    dirBtn.classList.toggle('on', showDir);
-    dirBtn.textContent = showDir ? '\u2794 Hide control direction' : '\u2794 Show control direction';
-    dirNote.style.display = showDir ? '' : 'none';
-    drawFlows();
-  } }, '\u2794 Show control direction');
-  const dirNote = el('p', { class: 'conn-dirnote', style: 'display:none', html:
-    `<strong>Curated, not derived.</strong> The ${PRODUCT_FLOWS.length} arrows show which product <em>issues</em> policy and which one
-     <em>enforces</em> it \u2014 for example Purview defines a sensitivity label and SharePoint applies it.
-     That relationship is <em>not</em> in the catalog data and cannot be inferred from two products sharing a scenario,
-     so it is hand-authored editorial. Each arrow cites surfaces in this catalog as evidence \u2014 click one to check the claim.
-     <br><br><strong>Entra is deliberately not drawn to everything.</strong> Every Microsoft Security API call is gated by an Entra
-     token and the Conditional Access policy attached to it \u2014 including SharePoint, Graph, Defender, Intune and Sentinel.
-     Because that is universally true it says nothing useful as an arrow, so it is stated once here instead. The Entra arrows
-     that <em>are</em> drawn carry a specific claim beyond authentication (identity risk as a signal, device-state gating,
-     agent identity issuance).` });
-  dirBar.appendChild(dirBtn);
-  v.appendChild(dirBar);
-  v.appendChild(dirNote);
+  // ---- controls
+  const bar = el('div', { class: 'atlas-bar' });
+  const PLATES = [
+    { id: 'eco', label: '\u25CE Ecosystem', hint: 'The whole system on one plate' },
+    { id: 'anatomy', label: '\u271A Product anatomy', hint: 'What enters a product, what it does, what leaves' },
+    { id: 'trace', label: '\u2192 Scenario trace', hint: 'Light up the products a real scenario crosses' },
+    { id: 'xray', label: '\u25EB Extensibility X-ray', hint: 'Everything you can build against, on every product at once' }
+  ];
+  PLATES.forEach(p => bar.appendChild(el('button', {
+    class: 'sys-modebtn' + (atlasPlate === p.id ? ' on' : ''), title: p.hint,
+    onclick: () => { atlasPlate = p.id; renderAtlas(); } }, p.label)));
+  v.appendChild(bar);
 
-  const wrap = el('div', { class: 'conn-wrap' });
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(svgNS, 'svg');
-  const defs = document.createElementNS(svgNS, 'defs');
-  defs.innerHTML = `<marker id="conn-arrow" viewBox="0 0 10 10" refX="9" refY="5"
-      markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" class="conn-arrow-head"/></marker>`;
-  svg.appendChild(defs);
-  svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
-  svg.setAttribute('class', 'conn-svg');
-  svg.setAttribute('role', 'img');
-  svg.setAttribute('aria-label', 'Force-directed map of connections between Microsoft Security products');
-  wrap.appendChild(svg);
-
-  const panel = el('div', { class: 'conn-panel', html:
-    `<div class="conn-panel-empty">Click a connection line or a product circle to see the detail here.</div>` });
-  wrap.appendChild(panel);
-  v.appendChild(wrap);
-
-  // ---- layout: seeded ring + simple spring/repulsion relaxation (no libraries) ----
-  const maxN = Math.max(...g.nodes.map(n => n.n));
-  const R = n => 16 + 26 * Math.sqrt(n.n / maxN);
-  g.nodes.forEach((n, i) => {
-    const a = (i / g.nodes.length) * Math.PI * 2 - Math.PI / 2;
-    n.x = W / 2 + Math.cos(a) * 200;
-    n.y = H / 2 + Math.sin(a) * 170;
-    n.vx = 0; n.vy = 0; n.r = R(n);
+  const ctl = el('div', { class: 'atlas-ctl' });
+  const layerWrap = el('div', { class: 'atlas-ctlgroup' });
+  layerWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'System layers'));
+  Object.keys(ATLAS_TYPES).forEach(t => {
+    const on = atlasLayers[t];
+    layerWrap.appendChild(el('button', { class: 'atlas-chip atlas-t-chip-' + t + (on ? ' on' : ''),
+      title: ATLAS_TYPES[t].note,
+      onclick: () => { atlasLayers[t] = !atlasLayers[t]; renderAtlas(); } }, ATLAS_TYPES[t].label));
   });
-  const byId = Object.fromEntries(g.nodes.map(n => [n.id, n]));
-  const maxW = Math.max(1, ...g.edges.map(e => e.w));
-
-  function step() {
-    for (const n of g.nodes) { n.fx = 0; n.fy = 0; }
-    // repulsion
-    for (let i = 0; i < g.nodes.length; i++) {
-      for (let j = i + 1; j < g.nodes.length; j++) {
-        const a = g.nodes[i], b = g.nodes[j];
-        let dx = a.x - b.x, dy = a.y - b.y;
-        let d2 = dx * dx + dy * dy || 0.01;
-        const d = Math.sqrt(d2);
-        const rep = 90000 / d2;
-        const ux = dx / d, uy = dy / d;
-        a.fx += ux * rep; a.fy += uy * rep;
-        b.fx -= ux * rep; b.fy -= uy * rep;
-        const minD = a.r + b.r + 18;
-        if (d < minD) { const push = (minD - d) * 0.6; a.fx += ux * push; a.fy += uy * push; b.fx -= ux * push; b.fy -= uy * push; }
-      }
-    }
-    // springs -- stronger pull for heavier shared-scenario counts
-    for (const e of g.edges) {
-      const a = byId[e.a], b = byId[e.b];
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.sqrt(dx * dx + dy * dy) || 0.01;
-      const target = 210 - 90 * (e.w / maxW);
-      const k = 0.02 * (0.4 + e.w / maxW);
-      const f = (d - target) * k;
-      const ux = dx / d, uy = dy / d;
-      a.fx += ux * f; a.fy += uy * f;
-      b.fx -= ux * f; b.fy -= uy * f;
-    }
-    for (const n of g.nodes) {
-      if (n.pinned) { n.vx = 0; n.vy = 0; continue; }
-      n.fx += (W / 2 - n.x) * 0.004;
-      n.fy += (H / 2 - n.y) * 0.004;
-      n.vx = (n.vx + n.fx) * 0.72;
-      n.vy = (n.vy + n.fy) * 0.72;
-      n.x += Math.max(-14, Math.min(14, n.vx));
-      n.y += Math.max(-14, Math.min(14, n.vy));
-      n.x = Math.max(n.r + 8, Math.min(W - n.r - 8, n.x));
-      // Bottom bound leaves room for the label drawn at r + 15 below centre,
-      // otherwise low-sitting nodes get their names clipped by the viewBox.
-      n.y = Math.max(n.r + 8, Math.min(H - n.r - 26, n.y));
-    }
+  // The ports chip drives the featured-port markers on the eco map. The X-ray
+  // replaces those with the full inventory, so the chip would be a dead control.
+  if (atlasPlate !== 'xray') {
+    layerWrap.appendChild(el('button', { class: 'atlas-chip atlas-t-chip-ports' + (atlasLayers.ports ? ' on' : ''),
+      title: 'Show the featured API/SDK ports on each product',
+      onclick: () => { atlasLayers.ports = !atlasLayers.ports; renderAtlas(); } }, 'Extensibility ports'));
   }
-  for (let i = 0; i < 420; i++) step();
+  ctl.appendChild(layerWrap);
 
-  // ---- draw ----
-  const gEdges = document.createElementNS(svgNS, 'g');
-  const gNodes = document.createElementNS(svgNS, 'g');
-  svg.appendChild(gEdges); svg.appendChild(gNodes);
-
-  let selectedEdge = null;
-  const edgeEls = g.edges.map(e => {
-    const line = document.createElementNS(svgNS, 'line');
-    line.setAttribute('class', 'conn-edge' + (e.w === 0 ? ' conn-edge-surface-only' : ''));
-    line.setAttribute('stroke-width', e.w === 0 ? 1.5 : (1.5 + 6 * (e.w / maxW)));
-    line.style.cursor = 'pointer';
-    const t = document.createElementNS(svgNS, 'title');
-    t.textContent = `${byId[e.a].label} \u2194 ${byId[e.b].label}: ${e.w} shared scenario${e.w === 1 ? '' : 's'}` +
-      (e.sharedSurfaces.length ? `, ${e.sharedSurfaces.length} shared surface${e.sharedSurfaces.length === 1 ? '' : 's'}` : '');
-    line.appendChild(t);
-    line.addEventListener('click', () => { selectedEdge = e; showEdge(e); });
-    gEdges.appendChild(line);
-    return { e, line };
+  const vWrap = el('div', { class: 'atlas-ctlgroup' });
+  vWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'Verification'));
+  [['verified', 'verified \u00b7 curated'], ['derived', 'derived \u00b7 inferred']].forEach(([k, lbl]) => {
+    vWrap.appendChild(el('button', { class: 'atlas-chip atlas-v-' + k + (atlasVerif[k] ? ' on' : ''),
+      onclick: () => { atlasVerif[k] = !atlasVerif[k]; renderAtlas(); } }, lbl));
   });
+  ctl.appendChild(vWrap);
 
-  const nodeEls = g.nodes.map(n => {
-    const grp = document.createElementNS(svgNS, 'g');
-    grp.setAttribute('class', 'conn-node');
-    grp.style.cursor = 'grab';
-    const c = document.createElementNS(svgNS, 'circle');
-    c.setAttribute('r', n.r);
-    c.setAttribute('class', 'conn-circle' + (n.kind === 'crosscutting' ? ' conn-circle-cross' : ''));
-    const t = document.createElementNS(svgNS, 'title');
-    t.textContent = `${n.label} \u2014 ${n.n} surfaces. ${n.tagline}`;
-    c.appendChild(t);
-    const emo = document.createElementNS(svgNS, 'text');
-    emo.setAttribute('class', 'conn-emoji'); emo.setAttribute('text-anchor', 'middle');
-    emo.setAttribute('dy', '0.35em'); emo.textContent = n.emoji;
-    const lab = document.createElementNS(svgNS, 'text');
-    lab.setAttribute('class', 'conn-label'); lab.setAttribute('text-anchor', 'middle');
-    lab.textContent = n.label.replace('Microsoft ', '').replace(' & agent identity', '').replace(' & endpoint platform', '').replace(' & Microsoft 365', '').replace(' & go-to-market', '');
-    grp.appendChild(c); grp.appendChild(emo); grp.appendChild(lab);
-    gNodes.appendChild(grp);
-    return { n, grp, c, emo, lab };
+  const sWrap = el('div', { class: 'atlas-ctlgroup' });
+  sWrap.appendChild(el('span', { class: 'atlas-ctllabel' }, 'Scenario trace'));
+  const sel = el('select', { class: 'sys-select', onchange: e => { atlasScenario = e.target.value; if (atlasScenario) atlasPlate = 'trace'; renderAtlas(); } });
+  sel.appendChild(el('option', { value: '' }, 'All scenarios (no trace)'));
+  spanning.forEach(sc => {
+    const o = el('option', { value: sc.id }, sc.label.replace(/^[^\w(]+\s*/, ''));
+    if (sc.id === atlasScenario) o.selected = true;
+    sel.appendChild(o);
   });
+  sWrap.appendChild(sel);
+  if (atlasSel || atlasScenario || atlasFlowSel) {
+    sWrap.appendChild(el('button', { class: 'atlas-chip', onclick: () => { atlasSel = null; atlasScenario = ''; atlasFlowSel = null; renderAtlas(); } }, 'Reset'));
+  }
+  ctl.appendChild(sWrap);
+  v.appendChild(ctl);
 
-  const gFlows = document.createElementNS(svgNS, 'g');
-  svg.appendChild(gFlows);
-  const flowEls = PRODUCT_FLOWS.map((f, i) => {
-    const path = document.createElementNS(svgNS, 'path');
-    path.setAttribute('class', 'conn-flow');
-    path.setAttribute('marker-end', 'url(#conn-arrow)');
-    path.setAttribute('fill', 'none');
-    // A 2px dashed curve is a poor click target, and the thicker derived edges sit
-    // underneath it. Pair every arrow with a wide transparent hit path so the arrow
-    // is actually clickable rather than technically present.
-    const hit = document.createElementNS(svgNS, 'path');
-    hit.setAttribute('class', 'conn-flow-hit');
-    hit.setAttribute('fill', 'none');
-    hit.style.cursor = 'pointer';
-    const t = document.createElementNS(svgNS, 'title');
-    t.textContent = `${byId[f.from].label} ${f.verb} ${byId[f.to].label}`;
-    hit.appendChild(t);
-    hit.addEventListener('click', ev => { ev.stopPropagation(); showFlow(f); });
-    hit.addEventListener('mouseenter', () => path.classList.add('hot'));
-    hit.addEventListener('mouseleave', () => path.classList.remove('hot'));
-    gFlows.appendChild(path);
-    gFlows.appendChild(hit);
-    return { f, path, hit, i };
-  });
-  function drawFlows() {
-    gFlows.style.display = showDir ? '' : 'none';
-    if (!showDir) return;
-    // Count parallel flows per ordered pair so two arrows between the same products
-    // (they exist in both directions) bow apart instead of sitting on top of each other.
-    // Two arrows between the same pair run in opposite directions, so the direction
-    // vector -- and therefore the perpendicular -- already flips between them. The bow
-    // sign must stay CONSTANT for the pair to land on opposite absolute sides; giving
-    // each an alternating sign cancels the flip out and stacks them on top of each other.
-    // Magnitude separates multiple flows that share the same ordered pair.
-    const seen = {};
-    for (const { f, path, hit } of flowEls) {
-      const m = (seen[f.from + '|' + f.to] = (seen[f.from + '|' + f.to] || 0) + 1);
-      const a = byId[f.from], b = byId[f.to];
-      const dx = b.x - a.x, dy = b.y - a.y;
-      const d = Math.hypot(dx, dy) || 1;
-      const ux = dx / d, uy = dy / d;
-      // start and end on the circle edges, not the centres, so the head is visible
-      const sx = a.x + ux * (a.r + 2), sy = a.y + uy * (a.r + 2);
-      const ex = b.x - ux * (b.r + 9), ey = b.y - uy * (b.r + 9);
-      const bow = 24 + 22 * (m - 1);
-      const mx = (sx + ex) / 2 - uy * bow, my = (sy + ey) / 2 + ux * bow;
-      const dAttr = `M ${sx} ${sy} Q ${mx} ${my} ${ex} ${ey}`;
-      path.setAttribute('d', dAttr);
-      hit.setAttribute('d', dAttr);
-    }
+  const stage = el('div', { class: 'atlas-stage' });
+  v.appendChild(stage);
+  const panel = el('div', { class: 'atlas-panel' });
+
+  if (atlasPlate === 'anatomy') renderAtlasAnatomy(stage, panel, flows);
+  else renderAtlasEco(stage, panel, flows);
+
+  stage.appendChild(panel);
+  if (atlasPlate === 'xray') {
+    if (atlasSel) atlasPanelXrayFamily(panel, atlasSel);
+    else atlasPanelXray(panel);
+  } else {
+  atlasPanelHome(panel, flows);
+  if (atlasFlowSel) { const f = flows.find(x => atlasFlowKey(x) === atlasFlowSel); if (f) atlasPanelFlow(panel, f); }
+  else if (atlasSel) atlasPanelFamily(panel, atlasSel, flows);
+  else if (atlasScenario) atlasPanelScenario(panel, flows);
+  else if (atlasPlate === 'trace') panel.innerHTML =
+    `<div class="atlas-panel-sec"><h4>\u2192 Scenario trace</h4>
+     <p>Pick a scenario from the <strong>Scenario trace</strong> dropdown above. The map will dim every product
+     the scenario does not touch and keep only the flows that run between the ones it does.</p>
+     <p>${spanning.length} of ${SCENARIOS.length} partner scenarios span more than one product family \u2014
+     only those can be traced.</p></div>`;
   }
 
-  function paint() {
-    for (const { e, line } of edgeEls) {
-      const a = byId[e.a], b = byId[e.b];
-      line.setAttribute('x1', a.x); line.setAttribute('y1', a.y);
-      line.setAttribute('x2', b.x); line.setAttribute('y2', b.y);
-      line.classList.toggle('sel', selectedEdge === e);
-    }
-    for (const { n, grp, emo, lab } of nodeEls) {
-      grp.setAttribute('transform', `translate(${n.x},${n.y})`);
-      emo.setAttribute('font-size', Math.max(13, n.r * 0.8));
-      lab.setAttribute('y', n.r + 15);
-    }
-    drawFlows();
-  }
-  paint();
-
-  // ---- drag ----
-  let dragging = null;
-  function pt(ev) {
-    const r = svg.getBoundingClientRect();
-    const cx = (ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left;
-    const cy = (ev.touches ? ev.touches[0].clientY : ev.clientY) - r.top;
-    return { x: cx * (W / r.width), y: cy * (H / r.height) };
-  }
-  nodeEls.forEach(({ n, grp }) => {
-    const start = ev => { dragging = n; n.pinned = true; grp.style.cursor = 'grabbing'; ev.preventDefault(); };
-    grp.addEventListener('mousedown', start);
-    grp.addEventListener('touchstart', start, { passive: false });
-    grp.addEventListener('click', ev => {
-      if (n.__moved) { n.__moved = false; return; }
-      ev.stopPropagation();
-      showNode(n);
-    });
-  });
-  function move(ev) {
-    if (!dragging) return;
-    const p = pt(ev); dragging.x = p.x; dragging.y = p.y; dragging.__moved = true;
-    for (let i = 0; i < 3; i++) step();
-    paint(); ev.preventDefault();
-  }
-  function end() {
-    if (dragging) { dragging.pinned = false; nodeEls.forEach(o => o.grp.style.cursor = 'grab'); }
-    dragging = null;
-  }
-  svg.addEventListener('mousemove', move);
-  svg.addEventListener('touchmove', move, { passive: false });
-  window.addEventListener('mouseup', end);
-  window.addEventListener('touchend', end);
-
-  // keep relaxing briefly so the layout settles visibly rather than snapping
-  let ticks = 0;
-  const timer = setInterval(() => {
-    if (!document.body.contains(svg)) { clearInterval(timer); return; }
-    if (dragging) return;
-    step(); paint();
-    if (++ticks > 120) clearInterval(timer);
-  }, 30);
-
-  // ---- detail panel ----
-  function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
-
-  function showEdge(e) {
-    const a = byId[e.a], b = byId[e.b];
-    const scList = e.scenarios.map(sc =>
-      `<li><a onclick="location.hash='#/scenario/${sc.id}'">${esc(sc.label)}</a></li>`).join('');
-    const surfList = e.sharedSurfaces.map(id =>
-      `<li><strong>${esc(S[id].name)}</strong> \u2014 ${esc(S[id].what)}</li>`).join('');
-    panel.innerHTML =
-      `<h3>${a.emoji} ${esc(a.label)} \u2194 ${b.emoji} ${esc(b.label)}</h3>
-       <p class="conn-panel-stat">${e.w} shared scenario${e.w === 1 ? '' : 's'}${e.sharedSurfaces.length ? ` \u00B7 ${e.sharedSurfaces.length} surface${e.sharedSurfaces.length === 1 ? '' : 's'} belonging to both` : ''}</p>
-       ${e.sharedSurfaces.length ? `<h4>Surfaces that belong to both products</h4><ul class="conn-list conn-list-surface">${surfList}</ul>` : ''}
-       ${(() => { const fl = flowsForPair(e.a, e.b); return fl.length
-            ? `<h4>Control direction <span class="conn-curated-inline">curated, not derived</span></h4>${fl.map(flowHtml).join('')}`
-            : ''; })()}
-       ${e.w ? `<h4>Scenarios that span both</h4><ul class="conn-list">${scList}</ul>`
-             : `<p class="conn-none">No single scenario spans these two products yet \u2014 they are linked only by the shared surface${e.sharedSurfaces.length === 1 ? '' : 's'} above. That is a genuine gap in scenario coverage, not a data error.</p>`}`;
-    paint();
-  }
-
-  function flowHtml(f) {
-    const ev = f.evidence.filter(id => S[id]).map(id =>
-      `<li><a href="${S[id].url}" target="_blank" rel="noopener">${esc(S[id].name)}</a></li>`).join('');
-    return `<div class="conn-flow-item">
-      <p class="conn-flow-head">${byId[f.from].emoji} <strong>${esc(byId[f.from].label)}</strong>
-        <span class="conn-flow-verb">${esc(f.verb)}</span>
-        ${byId[f.to].emoji} <strong>${esc(byId[f.to].label)}</strong></p>
-      <p class="conn-flow-what">${esc(f.what)}</p>
-      ${ev ? `<p class="conn-flow-evlabel">Evidence in this catalog</p><ul class="conn-list conn-flow-ev">${ev}</ul>` : ''}
-    </div>`;
-  }
-  function showFlow(f) {
-    panel.innerHTML = `<h3>\u2794 Control direction</h3>
-      <p class="conn-curated-tag">Curated editorial \u2014 not derived from the catalog data</p>
-      ${flowHtml(f)}`;
-  }
-
-  function showNode(n) {
-    const conns = g.edges.filter(e => e.a === n.id || e.b === n.id).sort((x, y) => y.w - x.w);
-    const rows = conns.map(e => {
-      const other = byId[e.a === n.id ? e.b : e.a];
-      return `<li><a onclick="__connShowEdge('${e.a}','${e.b}')">${other.emoji} ${esc(other.label)}</a>
-              <span class="conn-w">${e.w || 0} scenario${e.w === 1 ? '' : 's'}${e.sharedSurfaces.length ? ` \u00B7 ${e.sharedSurfaces.length} shared surface${e.sharedSurfaces.length === 1 ? '' : 's'}` : ''}</span></li>`;
-    }).join('');
-    panel.innerHTML =
-      `<h3>${n.emoji} ${esc(n.label)}</h3>
-       <p class="conn-panel-stat">${n.n} surfaces \u00B7 connects to ${conns.length} other product${conns.length === 1 ? '' : 's'}</p>
-       <p class="conn-tagline">${esc(n.tagline)}</p>
-       <ul class="conn-list conn-list-conn">${rows}</ul>
-       <button class="conn-filter-btn" onclick="__connFilterTo('${n.id}')">Filter the whole catalog to ${esc(n.label)}</button>`;
-  }
-
-  window.__connShowEdge = (a, b) => {
-    const e = g.edges.find(x => x.a === a && x.b === b);
-    if (e) { selectedEdge = e; showEdge(e); }
-  };
-  window.__connFilterTo = fid => {
-    filters.family = fid;
-    const sel = document.getElementById('f-family'); if (sel) sel.value = fid;
-    location.hash = '#/index';
-  };
-
-  // Strongest connection is the most useful default -- an empty panel wastes the fold.
-  if (g.edges.length) { selectedEdge = g.edges[0]; showEdge(g.edges[0]); }
-
-  // Ranked table below the graph: the graph is for intuition, this is for reading
-  // exact numbers, and it is what makes the page usable without a mouse.
-  const rows = g.edges.map(e =>
-    `<tr><td>${byId[e.a].emoji} ${esc(byId[e.a].label)}</td>
-         <td>${byId[e.b].emoji} ${esc(byId[e.b].label)}</td>
-         <td style="text-align:right;">${e.w}</td>
-         <td style="text-align:right;">${e.sharedSurfaces.length}</td>
-         <td><a onclick="__connShowEdge('${e.a}','${e.b}')">view</a></td></tr>`).join('');
-  v.appendChild(el('div', { class: 'conn-table-wrap', html:
-    `<h3 style="margin:22px 0 6px;">Every product pair, ranked</h3>
-     <p class="conn-sub" style="margin-top:0;">The same data as the graph, exact and readable.
-     \u201CShared surfaces\u201D means one surface genuinely belongs to both products \u2014 a structural seam,
-     stronger evidence than merely appearing in the same scenario.</p>
-     <table class="api-table conn-table">
-       <thead><tr><th>Product</th><th>Product</th><th style="text-align:right;">Shared scenarios</th><th style="text-align:right;">Shared surfaces</th><th></th></tr></thead>
-       <tbody>${rows}</tbody></table>` }));
-
-  const byFrom = {};
-  PRODUCT_FLOWS.forEach(f => (byFrom[f.from] = byFrom[f.from] || []).push(f));
-  const flowSections = FAMILIES.filter(f => byFrom[f.id]).map(fam =>
-    `<h4 class="conn-flow-group">${fam.emoji} ${esc(fam.label)} controls\u2026</h4>
-     ${byFrom[fam.id].map(flowHtml).join('')}`).join('');
-  v.appendChild(el('div', { class: 'conn-flows-wrap', html:
-    `<h3 style="margin:26px 0 6px;">\u2794 Who controls what <span class="conn-curated-inline">curated, not derived</span></h3>
-     <p class="conn-sub" style="margin-top:0;">Everything above this line is computed from the catalog.
-     <strong>This section is not.</strong> Which product <em>issues</em> policy and which one <em>enforces</em> it
-     is editorial judgement, because the data records only that two products appear together \u2014 never who is in charge.
-     It is separated out so you can weigh it differently, and every claim cites surfaces in this catalog so you can check it.</p>
-     ${flowSections}` }));
+  // The map is a picture; this is the same content in text, for keyboard users,
+  // for screen readers and for anyone who needs to copy a claim out.
+  v.appendChild(atlasTextFallback(flows));
 }
+
+function renderAtlasEco(stage, panel, flows) {
+  // The X-ray reuses this map deliberately: it is the same estate, read for a
+  // different question. Drawing a second map would double the geometry that
+  // has to stay in sync.
+  const xray = atlasPlate === 'xray';
+  const svg = svgEl('svg', { class: 'atlas-svg' + (xray ? ' atlas-svg-xray' : ''), viewBox: ATLAS_VIEWBOX, role: 'img',
+    'aria-label': xray
+      ? 'Map of how extensible each Microsoft Security product is, by operation type'
+      : 'Map of how Microsoft Security products feed and control one another' });
+  svg.appendChild(atlasArrowDefs());
+
+  ATLAS_REGIONS.forEach(r => {
+    svg.appendChild(svgEl('rect', { class: 'atlas-region', x: r.x, y: r.y, width: r.w, height: r.h, rx: 12 }));
+    const t = svgEl('text', { class: 'atlas-regionlabel', x: r.x + 12, y: r.y + 18 });
+    t.textContent = r.label.toUpperCase();
+    svg.appendChild(t);
+  });
+
+  // In X-ray the flows drop back to a faint skeleton — enough to keep the estate
+  // recognisable, not enough to compete with the extensibility bars.
+  const vis = flows.filter(atlasFlowVisible);
+  const offs = pairOffsets(vis, f => [f.from, f.to].sort().join('|'));
+  vis.forEach(f => {
+    const [sa, sb] = atlasSides(f.from, f.to);
+    const [sx, sy] = atlasAnchor(f.from, sa), [ex, ey] = atlasAnchor(f.to, sb);
+    const T = ATLAS_TYPES[f.type] || { dash: '', width: 1.5 };
+    const key = atlasFlowKey(f);
+    const active = atlasFlowSel === key;
+    const g = svgEl('g', { class: 'atlas-flow' + (active ? ' on' : ''), tabindex: '0', role: 'button',
+      'aria-label': `${FAMILY_BY_ID[f.from].label} ${f.verb} ${FAMILY_BY_ID[f.to].label}` });
+    const p = svgEl('path', {
+      class: 'atlas-line atlas-t-' + f.type + (f.verif === 'derived' ? ' atlas-derived' : ''),
+      d: edgePath(sx, sy, ex, ey, !!f.back, offs.get(f) || 0),
+      'stroke-width': (T.width || 1.5) * (active ? 1.9 : 1),
+      'stroke-dasharray': f.verif === 'derived' ? '2 6' : (T.dash || ''),
+      'marker-end': 'url(#atlasarrow-' + f.type + ')'
+    });
+    g.appendChild(p);
+    const hit = svgEl('path', { class: 'atlas-hit', d: p.getAttribute('d') });
+    g.appendChild(hit);
+    g.addEventListener('click', () => { atlasFlowSel = active ? null : key; renderAtlas(); });
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atlasFlowSel = active ? null : key; renderAtlas(); } });
+    svg.appendChild(g);
+  });
+
+  const scFams = atlasScenarioFams();
+  FAMILIES.forEach(fam => {
+    const L = ATLAS_LAYOUT[fam.id];
+    // A scenario trace has to actually light up the products it crosses, not
+    // just thin the lines, or the plate does not deliver what its label promises.
+    const dim = (scFams && !scFams.has(fam.id))
+      || (atlasSel && atlasSel !== fam.id && !vis.some(f => (f.from === atlasSel && f.to === fam.id) || (f.to === atlasSel && f.from === fam.id)));
+    const g = svgEl('g', { class: 'atlas-node' + (atlasSel === fam.id ? ' sel' : '') + (dim ? ' dim' : ''),
+      tabindex: '0', role: 'button', 'aria-label': fam.label + ' \u2014 ' + fam.tagline });
+    g.appendChild(svgEl('rect', { class: 'atlas-body', x: L.x, y: L.y, width: L.w, height: L.h, rx: 10 }));
+    g.appendChild(svgEl('rect', { class: 'atlas-accent atlas-region-' + L.region, x: L.x, y: L.y, width: 3.5, height: L.h, rx: 2 }));
+    const nm = svgEl('text', { class: 'atlas-nm', x: L.x + 14, y: L.y + 24 });
+    nm.textContent = fam.label;
+    g.appendChild(nm);
+    // Taglines are long and boxes are fixed width, so wrap rather than clip.
+    const tgLines = atlasWrap(g, fam.tagline, L.x + 14, L.y + 41, L.w - 28, 2, 'atlas-tg');
+    // Never let the meta line collide with a two-line tagline on a short box.
+    const metaY = Math.max(L.y + L.h - 10, L.y + 41 + (tgLines - 1) * 12 + 15);
+    const meta = svgEl('text', { class: 'atlas-meta t-mono', x: L.x + 14, y: metaY });
+    const gaps = atlasGapsFor(fam.id).length;
+    meta.textContent = `${atlasSurfaceCount(fam.id)} surfaces \u00b7 ${atlasWorkloadsFor(fam.id).length} workloads` + (gaps ? ` \u00b7 ${gaps} gaps` : '');
+    g.appendChild(meta);
+    g.addEventListener('click', () => { atlasSel = atlasSel === fam.id ? null : fam.id; atlasFlowSel = null; renderAtlas(); });
+    g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atlasSel = atlasSel === fam.id ? null : fam.id; atlasFlowSel = null; renderAtlas(); } });
+    svg.appendChild(g);
+
+    if (gaps) {
+      const gm = svgEl('g', { class: 'atlas-gapmark', tabindex: '0', role: 'button', 'aria-label': gaps + ' documented gaps on ' + fam.label });
+      gm.appendChild(svgEl('circle', { cx: L.x + L.w - 16, cy: L.y + 16, r: 9 }));
+      const q = svgEl('text', { class: 'atlas-gapq', x: L.x + L.w - 16, y: L.y + 20, 'text-anchor': 'middle' });
+      q.textContent = '?';
+      gm.appendChild(q);
+      gm.addEventListener('click', e => { e.stopPropagation(); atlasSel = fam.id; atlasFlowSel = null; renderAtlas(); });
+      svg.appendChild(gm);
+    }
+    if (atlasLayers.ports && !xray) {
+      const ports = atlasPortsFor(fam.id);
+      ports.slice(0, 6).forEach((sid, i) => {
+        const px = L.x + 16 + i * 15, py = L.y + L.h;
+        const pg = svgEl('g', { class: 'atlas-port', tabindex: '0', role: 'button', 'aria-label': 'Open spec for ' + S[sid].name });
+        pg.appendChild(svgEl('rect', { x: px - 4, y: py - 3, width: 8, height: 7, rx: 2 }));
+        pg.addEventListener('click', e => { e.stopPropagation(); openApiDrawer(sid); });
+        pg.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); openApiDrawer(sid); } });
+        const ti = svgEl('title'); ti.textContent = S[sid].name; pg.appendChild(ti);
+        svg.appendChild(pg);
+      });
+    }
+
+    // X-ray: an extensibility bar under each product, segmented by what you can
+    // actually do with it. Reading across the map answers "which products can I
+    // write to, not just read from" without opening anything.
+    if (xray) {
+      const c = atlasOpCountsFor(fam.id);
+      const total = atlasOpTotal(fam.id);
+      const bw = L.w - 28, bx = L.x + 14, by = L.y + L.h + 7;
+      const bg = svgEl('g', { class: 'atlas-xbar', tabindex: '0', role: 'button',
+        'aria-label': fam.label + ' \u2014 ' + atlasSurfaceCount(fam.id) + ' surfaces: '
+          + ATLAS_OPS_ORDER.map(o => c[o] + ' ' + OP_SHORT[o].toLowerCase()).join(', ') });
+      bg.appendChild(svgEl('rect', { class: 'atlas-xbar-bg', x: bx, y: by, width: bw, height: 9, rx: 4.5 }));
+      let ox = bx;
+      ATLAS_OPS_ORDER.forEach(o => {
+        if (!c[o] || !total) return;
+        const w = Math.max(2, (c[o] / total) * bw);
+        bg.appendChild(svgEl('rect', { class: 'atlas-xseg atlas-xop-' + o, x: ox, y: by, width: w, height: 9, rx: 2 }));
+        ox += w;
+      });
+      const ti = svgEl('title');
+      ti.textContent = fam.label + ' \u2014 ' + atlasSurfaceCount(fam.id) + ' surfaces \u00b7 '
+        + ATLAS_OPS_ORDER.filter(o => c[o]).map(o => c[o] + ' ' + OP_SHORT[o].toLowerCase()).join(' \u00b7 ');
+      bg.appendChild(ti);
+      bg.addEventListener('click', e => { e.stopPropagation(); atlasSel = atlasSel === fam.id ? null : fam.id; renderAtlas(); });
+      bg.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); atlasSel = fam.id; renderAtlas(); } });
+      svg.appendChild(bg);
+    }
+  });
+  stage.appendChild(svg);
+}
+
+// Naive but adequate wrapper: SVG has no text wrapping and the taglines are
+// authored prose of wildly varying length.
+function atlasWrap(parent, str, x, y, maxw, maxlines, cls) {
+  const words = String(str).split(/\s+/);
+  const perLine = Math.max(8, Math.floor(maxw / 5.6));
+  const lines = []; let cur = '';
+  words.forEach(w => {
+    if ((cur + ' ' + w).trim().length > perLine) { lines.push(cur.trim()); cur = w; } else cur += ' ' + w;
+  });
+  if (cur.trim()) lines.push(cur.trim());
+  lines.slice(0, maxlines).forEach((ln, i) => {
+    const isLast = i === Math.min(lines.length, maxlines) - 1;
+    const t = svgEl('text', { class: cls, x: x, y: y + i * 12 });
+    t.textContent = (isLast && lines.length > maxlines) ? ln.replace(/[\s,.;:]+$/, '') + '\u2026' : ln;
+    parent.appendChild(t);
+  });
+  return Math.min(lines.length, maxlines);
+}
+
+// Anatomy is fully derived: upstream and downstream come from the flows,
+// internal function from the catalog's own workloads, ports from ATLAS_PORTS
+// and gaps from NOT_EXTENSIBLE. Nothing here is separately authored, so it
+// cannot describe a product differently from the rest of the catalog.
+function renderAtlasAnatomy(stage, panel, flows) {
+  const fam = atlasSel || 'purview';
+  atlasSel = fam;
+  const F = FAMILY_BY_ID[fam];
+  const inb = flows.filter(f => f.to === fam && atlasVerif[f.verif]);
+  const outb = flows.filter(f => f.from === fam && atlasVerif[f.verif]);
+  const wl = atlasWorkloadsFor(fam), ports = atlasPortsFor(fam), gaps = atlasGapsFor(fam);
+  // The featured ports are a shortlist (3-6). Partners need the whole set, so
+  // the complete inventory sits below, grouped by the workloads that own it.
+  const invGroups_ = atlasSurfacesByWorkload(fam);
+  const inv = atlasSurfaceCount(fam);
+  const opBadge_ = sid => atlasOpsOf(sid)
+    .map(o => `<em class="atlas-opbadge atlas-xop-${o}">${connEsc(OP_SHORT[o] || o)}</em>`).join('');
+  const invGroups = invGroups_.map(gp => `
+    <h5 class="atlas-xmod">${connEsc(gp.label)} <span class="t-mono">${gp.surfaces.length}</span></h5>
+    <ul class="atlas-list conn-list atlas-xsurf">
+      ${gp.surfaces.map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a>${opBadge_(sid)}</li>`).join('')}
+    </ul>`).join('');
+
+  const picker = el('div', { class: 'atlas-picker' });
+  // The stage is a two-column grid built for "big map + narrow panel". Anatomy
+  // adds a third child, so auto-placement pushed the anatomy body into the
+  // 340px panel column and the panel into the wide one. Flag the stage so the
+  // columns can be assigned explicitly.
+  stage.classList.add('atlas-stage-anatomy');
+  FAMILIES.forEach(x => picker.appendChild(el('button', {
+    class: 'atlas-chip' + (x.id === fam ? ' on' : ''),
+    onclick: () => { atlasSel = x.id; atlasFlowSel = null; renderAtlas(); } }, x.emoji + ' ' + x.label)));
+  stage.appendChild(picker);
+
+  const col = (title, items, cls) => `
+    <div class="atlas-col ${cls}">
+      <h4>${connEsc(title)}</h4>
+      ${items.length ? items.join('') : '<p class="atlas-empty">Nothing recorded in this catalog.</p>'}
+    </div>`;
+  const flowItem = f => {
+    const other = f.from === fam ? f.to : f.from;
+    return `<button class="atlas-item atlas-t-item-${f.type}" data-flow="${connEsc(atlasFlowKey(f))}">
+      <span class="atlas-item-nm">${connEsc(FAMILY_BY_ID[other].label)}</span>
+      <span class="atlas-item-vb">${connEsc(f.verb)}</span>
+      <span class="atlas-item-mv">${connEsc(f.moves || '')}</span>
+      <span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span></button>`;
+  };
+  const wrap = el('div', { class: 'atlas-anatomy', html: `
+    <div class="atlas-anatomy-head">
+      <h3>${F.emoji} ${connEsc(F.label)}</h3>
+      <p class="conn-sub">${connEsc(F.tagline)} \u2014 ${atlasSurfaceCount(fam)} surfaces \u00b7 ${wl.length} workloads \u00b7 ${gaps.length} documented gaps</p>
+    </div>
+    <div class="atlas-anatomy-grid">
+      ${col('Upstream \u2014 what enters', inb.map(flowItem), 'up')}
+      ${col('Internal function \u2014 capability level', wl.map(w => `<div class="atlas-item atlas-item-static"><span class="atlas-item-nm">${connEsc(w.label)}</span></div>`), 'mid')}
+      ${col('Downstream \u2014 what leaves', outb.map(flowItem), 'down')}
+    </div>
+    <div class="atlas-anatomy-grid">
+      ${col('Extensibility ports', ports.map(sid => `<a class="atlas-item atlas-item-port" href="#surface/${encodeURIComponent(sid)}"><span class="atlas-item-nm">${connEsc(S[sid].name)}</span><span class="atlas-item-mv">${connEsc((S[sid].what || '').slice(0, 130))}\u2026</span></a>`), 'ports')}
+      ${col('Known gaps \u2014 not publicly extensible', gaps.map(g => `<div class="atlas-item atlas-item-gap"><span class="atlas-item-nm">? ${connEsc(g.label)}</span><span class="atlas-item-mv">${connEsc(g.why.slice(0, 180))}\u2026</span><span class="atlas-item-mv"><em>Workaround:</em> ${connEsc(g.workaround.slice(0, 160))}\u2026</span></div>`), 'gaps')}
+    </div>
+    <details class="atlas-inv">
+      <summary>Everything you can build against on ${connEsc(F.label)} \u2014 all ${inv} surfaces</summary>
+      <p class="atlas-xnote">The ${ports.length} ports above are the featured entry points. This is the
+      complete set this catalog holds for ${connEsc(F.label)}, grouped by capability area.
+      ${connEsc(OP_SHORT.read)}/${connEsc(OP_SHORT.ingest)}/${connEsc(OP_SHORT.act)}/${connEsc(OP_SHORT.route)}
+      badges say what each one lets you do.</p>
+      ${invGroups}
+    </details>` });
+  wrap.querySelectorAll('[data-flow]').forEach(b => b.addEventListener('click', () => { atlasFlowSel = b.getAttribute('data-flow'); renderAtlas(); }));
+  stage.appendChild(wrap);
+}
+
+function atlasPanelHome(panel, flows) {
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>How this ecosystem works</h4>
+      <p>A functional map, not a proximity graph. Every line answers: what moves, which way, and what causes it.
+      Select any product, line, port or <code>?</code> marker.</p>
+      <dl class="atlas-dl">
+        <dt>coverage</dt><dd>${FAMILIES.length} product families \u00b7 ${Object.keys(S).length} extensibility surfaces \u00b7 ${SCENARIOS.length} partner scenarios</dd>
+        <dt>verified</dt><dd>${flows.filter(f => f.verif === 'verified').length} curated directed flows, each citing catalog surfaces</dd>
+        <dt>derived</dt><dd>${flows.filter(f => f.verif === 'derived').length} response-path flows inferred from response scenarios \u2014 drawn dotted, never asserted as documented</dd>
+        <dt>gaps</dt><dd>${NOT_EXTENSIBLE.length} asked-for surfaces that are <strong>not</strong> publicly extensible \u2014 shown as <code>?</code>, never as lines</dd>
+      </dl>
+    </div>`;
+}
+
+// ---- X-ray panels ----------------------------------------------------------
+// Overview: how extensible each product actually is, ranked, so the reader can
+// compare rather than click nine times.
+function atlasPanelXray(panel) {
+  const rows = FAMILIES.map(f => {
+    const c = atlasOpCountsFor(f.id);
+    return { f: f, n: atlasSurfaceCount(f.id), c: c, gaps: atlasGapsFor(f.id).length };
+  }).sort((a, b) => b.n - a.n);
+  const legend = ATLAS_OPS_ORDER.map(o =>
+    `<span class="atlas-xkey"><i class="atlas-xop-${o}"></i>${connEsc(OP_SHORT[o])}</span>`).join('');
+  const list = rows.map(r => `
+    <li>
+      <button class="atlas-xrow" data-fam="${connEsc(r.f.id)}">
+        <span class="atlas-xrow-nm">${r.f.emoji} ${connEsc(r.f.label)}</span>
+        <span class="atlas-xrow-n t-mono">${r.n}</span>
+        <span class="atlas-xrow-ops">${ATLAS_OPS_ORDER.filter(o => r.c[o])
+          .map(o => `<em class="atlas-xop-${o}">${r.c[o]} ${connEsc(OP_SHORT[o].toLowerCase())}</em>`).join('')}</span>
+      </button>
+    </li>`).join('');
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>\u25EB Extensibility X-ray</h4>
+      <p>Not what the products do \u2014 what you can <strong>build against</strong>. The bar under each product
+      is its ${Object.keys(S).length} catalog surfaces split by operation, so you can see at a glance which
+      products you can <em>write to</em> and which are read-only.</p>
+      <div class="atlas-xlegend">${legend}</div>
+      <p class="atlas-xnote">A surface that both reads and writes is counted in both segments, so the bar is
+      weighted by capability, not by row count. Select a product for its full inventory.</p>
+      <ul class="atlas-xlist">${list}</ul>
+    </div>`;
+  panel.querySelectorAll('[data-fam]').forEach(b => b.addEventListener('click', () => {
+    atlasSel = b.getAttribute('data-fam'); renderAtlas();
+  }));
+}
+
+// One product's complete inventory, grouped by how you call it — which is the
+// question a partner asks second, right after "can I do this at all".
+function atlasPanelXrayFamily(panel, fam) {
+  const F = FAMILY_BY_ID[fam];
+  const ids = atlasSurfacesFor(fam);
+  const byMod = {};
+  ids.forEach(sid => { const m = atlasModOf(sid); (byMod[m] = byMod[m] || []).push(sid); });
+  const modName = m => (typeof MODALITY_LABELS !== 'undefined' && MODALITY_LABELS[m]) || m;
+  const opBadges = sid => atlasOpsOf(sid)
+    .map(o => `<em class="atlas-opbadge atlas-xop-${o}">${connEsc(OP_SHORT[o] || o)}</em>`).join('');
+  const groups = Object.keys(byMod).sort((a, b) => byMod[b].length - byMod[a].length).map(m => `
+    <h5 class="atlas-xmod">${connEsc(modName(m))} <span class="t-mono">${byMod[m].length}</span></h5>
+    <ul class="atlas-list conn-list atlas-xsurf">
+      ${byMod[m].map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a>${opBadges(sid)}</li>`).join('')}
+    </ul>`).join('');
+  const gaps = atlasGapsFor(fam);
+  const c = atlasOpCountsFor(fam);
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>${F.emoji} ${connEsc(F.label)}</h4>
+      <p class="conn-sub">${connEsc(F.tagline)}</p>
+      <dl class="atlas-dl">
+        <dt>surfaces</dt><dd><strong>${ids.length}</strong> in this catalog</dd>
+        <dt>operations</dt><dd>${ATLAS_OPS_ORDER.filter(o => c[o])
+          .map(o => `<em class="atlas-xop-${o}">${c[o]} ${connEsc(OP_SHORT[o].toLowerCase())}</em>`).join(' \u00b7 ')
+          || 'none classified'}</dd>
+        <dt>gaps</dt><dd>${gaps.length ? gaps.length + ' documented, shown below' : 'none recorded'}</dd>
+      </dl>
+      ${groups}
+      ${gaps.length ? `<h5 class="atlas-xmod">Not publicly extensible</h5>
+        <ul class="atlas-list atlas-xgaps">${gaps.map(g =>
+          `<li><strong>? ${connEsc(g.label)}</strong><span>${connEsc(g.why.slice(0, 150))}\u2026</span></li>`).join('')}</ul>` : ''}
+      <p><button class="atlas-chip" data-xback="1">\u2190 All products</button></p>
+    </div>`;
+  const back = panel.querySelector('[data-xback]');
+  if (back) back.addEventListener('click', () => { atlasSel = null; renderAtlas(); });
+}
+
+function atlasPanelScenario(panel, flows) {
+  const sc = SCENARIOS.find(s => s.id === atlasScenario);
+  if (!sc) return;
+  const fams = atlasFamiliesOfScenario(sc);
+  const order = FAMILIES.filter(f => fams.has(f.id));
+  const steps = order.map(f => `<li><strong>${f.emoji} ${connEsc(f.label)}</strong>
+      <span class="atlas-meta-inline">${connEsc(f.tagline)}</span></li>`).join('');
+  const legs = flows.filter(f => fams.has(f.from) && fams.has(f.to) && atlasFlowVisible0(f))
+    .map(f => `<li><strong>${connEsc(FAMILY_BY_ID[f.from].label)}</strong> ${connEsc(f.verb)}
+      <strong>${connEsc(FAMILY_BY_ID[f.to].label)}</strong>
+      <span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span></li>`).join('');
+  const surf = (sc.surfaces || []).filter(sid => S[sid])
+    .map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a></li>`).join('');
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>\u2192 ${connEsc(sc.label.replace(/^[^\w(]+\s*/, ''))}</h4>
+      <p>This scenario crosses <strong>${order.length}</strong> product families and cites
+      <strong>${(sc.surfaces || []).length}</strong> extensibility surfaces in this catalog.</p>
+      <h5>Products it crosses</h5><ol class="atlas-list">${steps}</ol>
+      ${legs ? `<h5>Documented legs between them</h5><ul class="atlas-list">${legs}</ul>` : ''}
+      ${surf ? `<h5>Surfaces it uses</h5><ul class="atlas-list conn-list">${surf}</ul>` : ''}
+    </div>`;
+}
+
+function atlasPanelFamily(panel, fam, flows) {
+  const F = FAMILY_BY_ID[fam];
+  const inb = flows.filter(f => f.to === fam && atlasFlowVisible0(f));
+  const outb = flows.filter(f => f.from === fam && atlasFlowVisible0(f));
+  const gaps = atlasGapsFor(fam), ports = atlasPortsFor(fam);
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>${F.emoji} ${connEsc(F.label)}</h4>
+      <p class="conn-sub">${connEsc(F.tagline)}</p>
+      <p>${connEsc(F.blurb)}</p>
+      <dl class="atlas-dl">
+        <dt>receives</dt><dd>${inb.length ? inb.map(f => `${connEsc(FAMILY_BY_ID[f.from].label)} <em>${connEsc(f.verb)}</em>`).join('<br>') : '\u2014'}</dd>
+        <dt>produces</dt><dd>${outb.length ? outb.map(f => `<em>${connEsc(f.verb)}</em> ${connEsc(FAMILY_BY_ID[f.to].label)}`).join('<br>') : '\u2014'}</dd>
+        <dt>catalog</dt><dd>${atlasSurfaceCount(fam)} surfaces \u00b7 ${atlasWorkloadsFor(fam).length} workloads</dd>
+      </dl>
+      ${ports.length ? `<h5 class="atlas-h5">Featured ports</h5><ul class="conn-list">${ports.map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a></li>`).join('')}</ul>` : ''}
+      ${gaps.length ? `<h5 class="atlas-h5">Not publicly extensible</h5>${gaps.map(g => `<div class="atlas-gapcard"><strong>? ${connEsc(g.label)}</strong><p>${connEsc(g.why)}</p><p><em>Workaround:</em> ${connEsc(g.workaround)}</p></div>`).join('')}` : ''}
+      <button class="atlas-chip" data-anatomy="1">\u271A Open anatomy</button>
+      <button class="atlas-chip" data-filter="${connEsc(fam)}">\u{1F50E} Filter catalog to this product</button>
+    </div>`;
+  const a = panel.querySelector('[data-anatomy]'); if (a) a.addEventListener('click', () => { atlasPlate = 'anatomy'; renderAtlas(); });
+  const b = panel.querySelector('[data-filter]'); if (b) b.addEventListener('click', () => window.__connFilterTo(fam));
+}
+// Panel listing ignores the current selection filter, otherwise selecting a
+// product would hide the very flows the panel is describing.
+function atlasFlowVisible0(f) {
+  if (!atlasVerif[f.verif]) return false;
+  if (f.type !== 'unclassified' && !atlasLayers[f.type]) return false;
+  return true;
+}
+
+function atlasPanelFlow(panel, f) {
+  const T = ATLAS_TYPES[f.type] || { label: 'Unclassified' };
+  const ev = (f.evidence || []).filter(sid => S[sid]);
+  panel.innerHTML = `
+    <div class="atlas-panel-sec">
+      <h4>${connEsc(FAMILY_BY_ID[f.from].label)} <span class="atlas-verb">${connEsc(f.verb)}</span> ${connEsc(FAMILY_BY_ID[f.to].label)}</h4>
+      <p><span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span> <span class="atlas-badge atlas-t-badge-${f.type}">${connEsc(T.label)}</span></p>
+      <dl class="atlas-dl">
+        <dt>what moves</dt><dd>${connEsc(f.moves || '\u2014')}</dd>
+        <dt>mechanism</dt><dd>${connEsc(f.mech || '\u2014')}</dd>
+        <dt>cadence</dt><dd>${connEsc(f.cadence || '\u2014')}</dd>
+        <dt>support</dt><dd>${connEsc(f.native || '\u2014')}</dd>
+      </dl>
+      <p>${connEsc(f.what)}</p>
+      ${ev.length ? `<h5 class="atlas-h5">Evidence in this catalog</h5><ul class="conn-list">${ev.map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a></li>`).join('')}</ul>` : ''}
+    </div>`;
+}
+
+function atlasTextFallback(flows) {
+  const byFrom = {};
+  flows.forEach(f => (byFrom[f.from] = byFrom[f.from] || []).push(f));
+  const sections = FAMILIES.filter(f => byFrom[f.id]).map(fam => `
+    <h4 class="conn-flow-group">${fam.emoji} ${connEsc(fam.label)} feeds\u2026</h4>
+    ${byFrom[fam.id].map(f => {
+      const ev = (f.evidence || []).filter(sid => S[sid])
+        .map(sid => `<li><a href="#surface/${encodeURIComponent(sid)}">${connEsc(S[sid].name)}</a></li>`).join('');
+      return `<div class="conn-flow">
+        <p class="conn-flow-head"><strong>${connEsc(f.verb)}</strong> ${connEsc(FAMILY_BY_ID[f.to].label)}
+          <span class="atlas-badge atlas-v-${f.verif}">${f.verif}</span></p>
+        <p class="conn-flow-what">${connEsc(f.what)}</p>
+        ${f.moves ? `<p class="conn-flow-what"><em>Moves:</em> ${connEsc(f.moves)} \u00b7 <em>Cadence:</em> ${connEsc(f.cadence || '\u2014')}</p>` : ''}
+        ${ev ? `<p class="conn-flow-evlabel">Evidence in this catalog</p><ul class="conn-list conn-flow-ev">${ev}</ul>` : ''}
+      </div>`;
+    }).join('')}`).join('');
+  const gapHtml = NOT_EXTENSIBLE.map(g => `<div class="conn-flow"><p class="conn-flow-head"><strong>? ${connEsc(g.label)}</strong>
+      <span class="atlas-badge atlas-v-gap">not extensible</span></p>
+      <p class="conn-flow-what">${connEsc(g.why)}</p>
+      <p class="conn-flow-what"><em>Workaround:</em> ${connEsc(g.workaround)}</p></div>`).join('');
+  return el('div', { class: 'conn-flows-wrap', html:
+    `<h3 style="margin:26px 0 6px;">\u2794 Every claim on this map, in text <span class="conn-curated-inline">curated, not derived</span></h3>
+     <p class="conn-sub" style="margin-top:0;">The same directed claims and the same evidence, readable without the diagram.</p>
+     ${sections}
+     <h3 style="margin:26px 0 6px;">? What is <em>not</em> publicly extensible</h3>
+     <p class="conn-sub" style="margin-top:0;">Drawn on the map as markers, never as lines \u2014 a line would imply a path that does not exist.</p>
+     ${gapHtml}` });
+}
+
+window.__connFilterTo = fid => {
+  filters.family = fid;
+  const sel = document.getElementById('f-family'); if (sel) sel.value = fid;
+  location.hash = '#/index';
+};
 
 // ----------------------------------------------------------------------------
 // MIND MAP MODE — global toggle that re-renders the current view as markmap
@@ -7419,9 +8215,15 @@ function renderAsMindmap(builder) {
 // ----------------------------------------------------------------------------
 // ROUTER
 // ----------------------------------------------------------------------------
+// The Connections view was superseded by the Atlas. Old links must still land.
+function atlasLegacyRoute(r) { return r === 'connections' ? 'atlas' : r; }
 function currentRoute() {
+  // #surface/<sid> is a drawer deep-link, not a view route. If it ever reaches
+  // the router (direct URL load), keep the reader on a real view instead of
+  // falling through to the default and blanking whatever they were looking at.
+  if (location.hash.indexOf('#surface/') === 0) return window.__pemLastRoute || 'atlas';
   const h = location.hash.replace(/^#\//, '') || 'family';
-  return h;
+  return atlasLegacyRoute(h);
 }
 function rerender() {
   if (typeof window.updateSurfaceCounter === 'function') window.updateSurfaceCounter();
@@ -7485,7 +8287,7 @@ function rerender() {
       case 'partners': return renderAsMindmap(buildPartnersMd);
       case 'modality': return renderAsMindmap(buildModalityMd);
       case 'index':    return renderAsMindmap(buildIndexMd);
-      case 'connections': return renderConnections();
+      case 'atlas': return renderAtlas();
       case 'workload': return renderWorkload();
       default:         return renderAsMindmap(buildScenarioMd);
     }
@@ -7497,7 +8299,7 @@ function rerender() {
     case 'workload': return renderWorkload();
     case 'modality': return renderModality();
     case 'index':    return renderIndex();
-    case 'connections': return renderConnections();
+    case 'atlas': return renderAtlas();
     default:         return renderScenarios();
   }
 }
@@ -8268,6 +9070,19 @@ function initApp() {
     document.querySelectorAll('nav.entry button').forEach(b => {
       b.onclick = () => { location.hash = `#/${b.dataset.route}`; };
     });
+    // #surface/<sid> anchors open the in-page spec drawer. patchLinks() only
+    // binds markmap's SVG anchors; the Atlas panel, its anatomy ports and its
+    // text fallback emit plain HTML anchors, which would otherwise set the hash,
+    // miss the router's switch and fall through to the default view — throwing
+    // the reader out of the map they were reading. Delegated so it covers every
+    // such link, present and future, without each renderer re-wiring it.
+    document.addEventListener('click', e => {
+      const a = e.target && e.target.closest && e.target.closest('a[href^="#surface/"]');
+      if (!a) return;
+      e.preventDefault();
+      const sid = decodeURIComponent(a.getAttribute('href').slice('#surface/'.length));
+      if (S[sid]) openApiDrawer(sid);
+    });
     // Wire filters
     const onFilter = () => {
       filters.family    = document.getElementById('f-family').value;
@@ -8367,7 +9182,7 @@ function initApp() {
           <li><strong>🧩 Build type</strong> — start here if you know what kind of thing you ship (product / app, MSSP, SASE, MDM, connector).</li>
           <li><strong>🛡️ Workload</strong> — start here if you know the specific workload (DLP, eDiscovery, XDR incidents, Conditional Access, SIEM ingestion, MDM, etc.).</li>
           <li><strong>⚙️ API modality</strong> — start here if you know the call style (Graph, PowerShell, SDK, streaming).</li>
-          <li><strong>🕸️ Connections</strong> — start here if you need to explain how the products fit together. Shows which products genuinely overlap, derived from the surfaces and scenarios themselves: thicker line = more shared scenarios, dashed line = the two products share a surface but no scenario spans them yet. The computed links are <em>undirected</em>, because the catalog records that two products co-occur, not which one controls the other. <strong>Show control direction</strong> overlays a separate <em>hand-authored</em> layer of who issues policy and who enforces it (for example Purview defines a sensitivity label, SharePoint applies it) — it is labelled <em>curated</em> wherever it appears and every arrow cites surfaces in this catalog as evidence, so you can weigh it differently from the computed numbers.</li>
+          <li><strong>&#128506;&#65039; Atlas</strong> &mdash; start here if you need to explain how the products fit together. A functional map of the whole estate: every line is a <em>directed</em> claim about what moves between two products and which way, colour-coded by system layer (policy, sensor telemetry, identity, detection, response). 17 flows are <em>curated</em> and each cites surfaces in this catalog as evidence; 3 response paths are <em>derived</em> from multi-product scenarios and drawn dotted, never asserted as documented. The 9 things that are <em>not</em> publicly extensible appear as <strong>?</strong> markers, never as lines &mdash; a line would imply a path that does not exist. Select any product to see just its connections, or switch to <strong>Product anatomy</strong> for one product's inputs, outputs, ports and gaps.</li>
           <li><strong>🔤 A–Z</strong> — full alphabetical surface index with caveats and chips.</li>
         </ul>
 
@@ -8551,14 +9366,14 @@ function initApp() {
     // "How to read this" intro panel — first-load + on-demand
     function showIntro() {
       const existing = document.getElementById('intro-modal');
-      if (existing) { existing.remove(); return; }
+      if (existing) { closeIntro(); return; }
       const modal = document.createElement('div');
       modal.id = 'intro-modal';
       modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;';
       modal.innerHTML = `<div style="background:var(--cp-surface);color:var(--cp-text);max-width:680px;max-height:85vh;overflow:auto;padding:28px;border-radius:8px;box-shadow:0 8px 32px rgba(0,0,0,0.3);line-height:1.5;">
         <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:12px;">
           <h2 style="margin:0;">📘 How to read this map</h2>
-          <button onclick="document.getElementById('intro-modal').remove()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--cp-text);">×</button>
+          <button aria-label="Close" onclick="closeIntro()" style="background:none;border:none;font-size:24px;cursor:pointer;color:var(--cp-text);">×</button>
         </div>
         <p><strong>What this is:</strong> A working catalog of every Microsoft Security extensibility surface — APIs, SDKs, PowerShell, connectors, portals — across Purview, Defender, Entra, Sentinel, Intune, Security Copilot and Agent 365, organized by partner-recognizable scenarios, workloads, and modalities. Curated by the CXE Security Partner SDC team for Microsoft partners, customers, and developers building on Microsoft Security.</p>
         <p><strong>Vocabulary used here:</strong></p>
@@ -8577,7 +9392,7 @@ function initApp() {
           <li><strong>🧩 Build type</strong> — start here if you know what kind of thing you ship (product / app, MSSP, SASE, MDM, connector).</li>
           <li><strong>🛡️ Workload</strong> — start here if you know the specific workload (DLP, eDiscovery, XDR incidents, Conditional Access, SIEM ingestion, MDM, etc.).</li>
           <li><strong>⚙️ API modality</strong> — start here if you know the call style (Graph, PowerShell, SDK, streaming).</li>
-          <li><strong>🕸️ Connections</strong> — start here if you need to explain how the products fit together. Shows which products genuinely overlap, derived from the surfaces and scenarios themselves: thicker line = more shared scenarios, dashed line = the two products share a surface but no scenario spans them yet. The computed links are <em>undirected</em>, because the catalog records that two products co-occur, not which one controls the other. <strong>Show control direction</strong> overlays a separate <em>hand-authored</em> layer of who issues policy and who enforces it (for example Purview defines a sensitivity label, SharePoint applies it) — it is labelled <em>curated</em> wherever it appears and every arrow cites surfaces in this catalog as evidence, so you can weigh it differently from the computed numbers.</li>
+          <li><strong>&#128506;&#65039; Atlas</strong> &mdash; start here if you need to explain how the products fit together. A functional map of the whole estate: every line is a <em>directed</em> claim about what moves between two products and which way, colour-coded by system layer (policy, sensor telemetry, identity, detection, response). 17 flows are <em>curated</em> and each cites surfaces in this catalog as evidence; 3 response paths are <em>derived</em> from multi-product scenarios and drawn dotted, never asserted as documented. The 9 things that are <em>not</em> publicly extensible appear as <strong>?</strong> markers, never as lines &mdash; a line would imply a path that does not exist. Select any product to see just its connections, or switch to <strong>Product anatomy</strong> for one product's inputs, outputs, ports and gaps.</li>
           <li><strong>🔤 A–Z</strong> — full alphabetical surface index with caveats and chips.</li>
         </ul>
         <p><strong>Chip vocabulary on each surface:</strong></p>
@@ -8590,14 +9405,26 @@ function initApp() {
           <li><span class="chip gap">⚠ gap</span> — known limitation/caveat · <span class="chip region">🌐 region</span> — regional availability</li>
         </ul>
         <p><strong>⚠ Read this before citing externally:</strong> This is a working partner & developer reference, not an official Microsoft publication. Partner attributions are illustrative. Always verify rate limits, scopes, and GA status against the linked Microsoft Learn page (chip text shows the limit; underlying URL is the source of truth). Filed bug or factual correction? <a href="mailto:yuliyasl@microsoft.com?subject=Microsoft%20Security%20Extensibility%20Catalog%20%E2%80%94%20correction&body=Surface%20or%20page%3A%20%0AWhat%27s%20wrong%3A%20%0ASource%2Flink%20that%20shows%20the%20correct%20info%3A%20%0A" target="_blank" rel="noopener">Email a correction</a>.</p>
-        <button onclick="localStorage.setItem('intro-seen','1');document.getElementById('intro-modal').remove()" style="margin-top:8px;padding:8px 16px;background:var(--cp-accent,#0078d4);color:#fff;border:none;border-radius:4px;cursor:pointer;">Got it — don't show again</button>
+        <button onclick="closeIntro()" style="margin-top:8px;padding:8px 16px;background:var(--cp-accent,#0078d4);color:#fff;border:none;border-radius:4px;cursor:pointer;">Got it — don't show again</button>
       </div>`;
-      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+      modal.onclick = (e) => { if (e.target === modal) closeIntro(); };
       document.body.appendChild(modal);
+      document.addEventListener('keydown', introEsc);
     }
+    // Every dismissal path must persist, or the panel returns on the next visit.
+    function introEsc(e) { if (e.key === 'Escape') closeIntro(); }
+    function closeIntro() {
+      try { localStorage.setItem('intro-seen', '1'); } catch (e) {}
+      document.removeEventListener('keydown', introEsc);
+      const m = document.getElementById('intro-modal');
+      if (m) m.remove();
+    }
+    window.closeIntro = closeIntro;
     const introLink = document.getElementById('show-intro');
     if (introLink) introLink.onclick = (e) => { e.preventDefault(); showIntro(); };
-    if (!localStorage.getItem('intro-seen')) setTimeout(showIntro, 400);
+    // Narrow viewports: the panel covers the whole page and its dismiss button
+    // falls below the fold, so let mobile users open it from the header link instead.
+    if (!localStorage.getItem('intro-seen') && window.innerWidth >= 700) setTimeout(showIntro, 400);
     // Theme
     document.getElementById('theme').onclick = () => {
       const cur = document.documentElement.getAttribute('data-theme');
@@ -8698,8 +9525,44 @@ function initApp() {
       };
     }
     // Hash routing
-    window.addEventListener('hashchange', rerender);
+    // The filter bar is a flat run of alternating <label>/<select> siblings, so
+    // when it wraps, a label can land on one line and its control on the next —
+    // at 1920 that orphaned "ACCESS METHOD" from its dropdown, and on a phone it
+    // paired every label with the wrong control. Bind each label to the control
+    // it labels so the pair always wraps as one unit. Done in JS rather than in
+    // the markup so it covers any filter added later.
+    function groupFilterFields() {
+      document.querySelectorAll('.filters').forEach(bar => {
+        [...bar.querySelectorAll(':scope > label')].forEach(label => {
+          const ctl = label.nextElementSibling;
+          if (!ctl || !/^(SELECT|INPUT)$/.test(ctl.tagName)) return;
+          const field = document.createElement('span');
+          field.className = 'f-field';
+          label.parentNode.insertBefore(field, label);
+          field.appendChild(label);
+          field.appendChild(ctl);
+          // A help toggle sitting right after a control belongs to that control,
+          // not floating between fields where it breaks the column grid.
+          const help = field.nextElementSibling;
+          if (help && help.tagName === 'BUTTON' && /help/.test(help.className)) {
+            field.appendChild(help);
+          }
+        });
+      });
+    }
+
+    // #surface/<sid> can also arrive by hand — pasted into the address bar on
+    // first load or mid-session — so resolve it after every route pass, not just
+    // at init. currentRoute() keeps the underlying view stable while this runs.
+    const openSurfaceFromHash = () => {
+      if (location.hash.indexOf('#surface/') !== 0) return;
+      const sid = decodeURIComponent(location.hash.slice('#surface/'.length));
+      if (S[sid]) openApiDrawer(sid);
+    };
+    window.addEventListener('hashchange', () => { rerender(); openSurfaceFromHash(); });
+    groupFilterFields();
     rerender();
+    openSurfaceFromHash();
     document.title = '[ok] ' + document.title;
   } catch (e) {
     document.body.insertAdjacentHTML('beforeend',
